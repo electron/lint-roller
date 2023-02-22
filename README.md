@@ -1,5 +1,6 @@
 # @dsanders11/markdown-linting
 
+[![Continuous Integration](https://github.com/dsanders11/markdown-linting/actions/workflows/test.yml/badge.svg)](https://github.com/dsanders11/markdown-linting/actions/workflows/test.yml)
 [![npm version](http://img.shields.io/npm/v/@dsanders11/markdown-linting.svg)](https://npmjs.org/package/@dsanders11/markdown-linting)
 
 > Markdown linting helpers for Electron org repos
