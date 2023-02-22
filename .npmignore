@@ -1,0 +1,8 @@
+bin
+.vscode
+.prettierrc.json
+tsconfig.json
+dist/**/__tests__
+.circleci
+.github
+.releaserc.json

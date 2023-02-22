@@ -1,0 +1,52 @@
+{
+  "name": "@dsanders11/markdown-linting",
+  "version": "1.0.0",
+  "description": "Markdown linting helpers for Electron org repos",
+  "bin": {
+    "electron-markdownlint": "./dist/bin/markdownlint-cli-wrapper.js",
+    "electron-lint-markdown-links": "./dist/bin/lint-markdown-links.js"
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "yarn run build",
+    "lint:fix": "prettier --write \"{bin,lib,markdownlint-rules}/**/*.{js,ts}\"",
+    "lint:markdown": "yarn run build && node ./dist/bin/markdownlint-cli-wrapper.js \"*.md\" && node ./dist/bin/lint-markdown-links.js --root .",
+    "lint:prettier": "prettier --check \"{bin,lib,markdownlint-rules}/**/*.{js,ts}\"",
+    "lint": "yarn run lint:prettier && yarn run lint:markdown"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsanders11/markdown-linting.git"
+  },
+  "author": "David Sanders <dsanders11@ucsbalum.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dsanders11/markdown-linting/issues"
+  },
+  "homepage": "https://github.com/dsanders11/markdown-linting#readme",
+  "devDependencies": {
+    "@types/klaw": "^3.0.3",
+    "@types/markdown-it": "^12.2.3",
+    "@types/minimist": "^1.2.2",
+    "@types/node": "^18.14.0",
+    "@types/node-fetch": "^2.6.2",
+    "prettier": "^2.8.4",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "@dsanders11/vscode-markdown-languageservice": "^0.3.0-alpha.4",
+    "klaw": "^3.0.0",
+    "markdown-it": "^13.0.1",
+    "markdownlint-cli": "^0.33.0",
+    "mdast-util-from-markdown": "^1.3.0",
+    "minimist": "^1.2.8",
+    "node-fetch": "^2.6.9",
+    "unist-util-visit": "^4.1.2",
+    "vscode-languageserver": "^8.1.0",
+    "vscode-languageserver-textdocument": "^1.0.8",
+    "vscode-uri": "^3.0.7"
+  }
+}
