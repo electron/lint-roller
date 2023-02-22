@@ -10,6 +10,7 @@
     "strict": true,
     "outDir": "dist",
     "types": [
+      "jest",
       "node"
     ],
     "allowSyntheticDefaultImports": true,
