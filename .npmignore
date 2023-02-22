@@ -1,8 +1,10 @@
 bin
 .vscode
 .prettierrc.json
+.eslintrc.json
+.markdownling.json
 tsconfig.json
-dist/**/__tests__
+tests
 .circleci
 .github
 .releaserc.json
