@@ -9,6 +9,7 @@
 
 ```bash
 yarn global add @dsanders11/markdown-linting
+
 electron-markdownlint "**/*.md"
 electron-lint-markdown-links --root docs/
 ```
