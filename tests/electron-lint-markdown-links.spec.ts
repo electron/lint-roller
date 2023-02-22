@@ -32,6 +32,17 @@ describe('electron-lint-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
+  it('should catch broken cross-file links', () => {
+    const { status, stdout } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      path.resolve(FIXTURES_DIR, 'broken-cross-file-link.md'),
+    );
+
+    expect(stdout.toString('utf-8')).toContain('Broken link');
+    expect(status).toEqual(1);
+  });
+
   it.skip('should by default ignore broken external links', () => {
     const { status } = runLintMarkdownLinks(
       '--root',
