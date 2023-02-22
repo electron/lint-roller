@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import * as glob from 'glob';
 import * as MarkdownIt from 'markdown-it';
 import {
   githubSlugifier,
@@ -19,8 +20,6 @@ import {
 import { Emitter, Range } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-
-import { findMatchingFiles } from './utils';
 
 import type { Definition, ImageReference, Link, LinkReference } from 'mdast';
 import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
@@ -86,10 +85,14 @@ export class MarkdownParser implements IMdParser {
 export class DocsWorkspace implements IWorkspace {
   private readonly documentCache: Map<string, TextDocument>;
   readonly root: string;
+  readonly globs: string[];
+  readonly ignoreGlobs: string[];
 
-  constructor(root: string) {
+  constructor(root: string, globs: string[], ignoreGlobs: string[] = []) {
     this.documentCache = new Map();
     this.root = root;
+    this.globs = globs;
+    this.ignoreGlobs = ignoreGlobs;
   }
 
   get workspaceFolders() {
@@ -97,7 +100,7 @@ export class DocsWorkspace implements IWorkspace {
   }
 
   async getAllMarkdownDocuments(): Promise<Iterable<ITextDocument>> {
-    const files = await findMatchingFiles(this.root, (file) => file.endsWith('.md'));
+    const files = this.globs.flatMap((pattern) => glob.sync(pattern, { ignore: this.ignoreGlobs }));
 
     for (const file of files) {
       const document = TextDocument.create(

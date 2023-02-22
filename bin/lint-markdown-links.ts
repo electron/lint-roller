@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 import {
   createLanguageService,
@@ -57,8 +59,18 @@ async function fetchExternalLink(link: string, checkRedirects = false) {
   return false;
 }
 
-async function main(workspaceRoot: string, { fetchExternalLinks = false, checkRedirects = false }) {
-  const workspace = new DocsWorkspace(workspaceRoot);
+interface Options {
+  fetchExternalLinks?: boolean;
+  checkRedirects?: boolean;
+  ignoreGlobs?: string[];
+}
+
+async function main(
+  workspaceRoot: string,
+  globs: string[],
+  { fetchExternalLinks = false, checkRedirects = false, ignoreGlobs = [] }: Options,
+) {
+  const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
   const parser = new MarkdownParser();
   const linkComputer = new MarkdownLinkComputer(workspace);
   const languageService = createLanguageService({
@@ -126,8 +138,8 @@ function parseCommandLine() {
   const showUsage = (arg?: string): boolean => {
     if (!arg || arg.startsWith('-')) {
       console.log(
-        'Usage: electron-lint-markdown-links --root <dir> [-h|--help] [--fetch-external-links] ' +
-          '[--check-redirects]',
+        'Usage: electron-lint-markdown-links --root <dir> <globs> [-h|--help] [--fetch-external-links] ' +
+          '[--check-redirects [--ignore <globs>]',
       );
       process.exit(1);
     }
@@ -137,12 +149,12 @@ function parseCommandLine() {
 
   const opts = minimist(process.argv.slice(2), {
     boolean: ['help', 'fetch-external-links', 'check-redirects'],
-    string: ['root'],
+    string: ['root', 'ignore', 'ignore-path'],
     stopEarly: true,
     unknown: showUsage,
   });
 
-  if (opts.help || !opts.root) showUsage();
+  if (opts.help || !opts.root || !opts._.length) showUsage();
 
   return opts;
 }
@@ -150,9 +162,24 @@ function parseCommandLine() {
 if (require.main === module) {
   const opts = parseCommandLine();
 
-  main(opts.root, {
+  if (opts.ignore) {
+    opts.ignore = Array.isArray(opts.ignore) ? opts.ignore : [opts.ignore];
+  } else {
+    opts.ignore = [];
+  }
+
+  if (opts['ignore-path']) {
+    const ignores = fs.readFileSync(path.resolve(opts['ignore-path']), { encoding: 'utf-8' });
+
+    for (const ignore of ignores.split(os.EOL)) {
+      opts.ignore.push(ignore.trimEnd());
+    }
+  }
+
+  main(opts.root, opts._, {
     fetchExternalLinks: opts['fetch-external-links'],
     checkRedirects: opts['check-redirects'],
+    ignoreGlobs: opts.ignore,
   })
     .then((errors) => {
       if (errors) process.exit(1);

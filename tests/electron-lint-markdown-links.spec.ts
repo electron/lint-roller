@@ -32,6 +32,44 @@ describe('electron-lint-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
+  it('can ignore a glob', () => {
+    const { status } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      '--ignore',
+      '**/broken-*-link.md',
+      path.resolve(FIXTURES_DIR, '*.md'),
+    );
+
+    expect(status).toEqual(0);
+  });
+
+  it('can ignore multiple globs', () => {
+    const { status } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      '--ignore',
+      '**/broken-{external,internal}-link.md',
+      '--ignore',
+      '**/broken-cross-file-link.md',
+      path.resolve(FIXTURES_DIR, '*.md'),
+    );
+
+    expect(status).toEqual(0);
+  });
+
+  it('can ignore from a file', () => {
+    const { status } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      '--ignore-path',
+      path.resolve(FIXTURES_DIR, 'ignorepaths'),
+      path.resolve(FIXTURES_DIR, '*.md'),
+    );
+
+    expect(status).toEqual(0);
+  });
+
   it('should catch broken cross-file links', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',
@@ -43,7 +81,7 @@ describe('electron-lint-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
-  it.skip('should by default ignore broken external links', () => {
+  it('should by default ignore broken external links', () => {
     const { status } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
@@ -65,7 +103,7 @@ describe('electron-lint-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
-  it.skip('can warn about redirected external links with --check-redirects', () => {
+  it('can warn about redirected external links with --check-redirects', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
@@ -73,8 +111,6 @@ describe('electron-lint-markdown-links', () => {
       '--check-redirects',
       path.resolve(FIXTURES_DIR, 'redirected-external-link.md'),
     );
-
-    console.log(stdout.toString('utf-8'));
 
     expect(stdout.toString('utf-8')).toContain('Link redirection');
     expect(status).toEqual(0);
