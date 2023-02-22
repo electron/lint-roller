@@ -176,7 +176,7 @@ if (require.main === module) {
     }
   }
 
-  main(opts.root, opts._, {
+  main(path.resolve(process.cwd(), opts.root), opts._, {
     fetchExternalLinks: opts['fetch-external-links'],
     checkRedirects: opts['check-redirects'],
     ignoreGlobs: opts.ignore,
