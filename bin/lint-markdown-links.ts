@@ -129,7 +129,7 @@ function parseCommandLine() {
         'Usage: electron-lint-markdown-links --root <dir> [-h|--help] [--fetch-external-links] ' +
           '[--check-redirects]',
       );
-      process.exit(0);
+      process.exit(1);
     }
 
     return true;
