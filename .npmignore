@@ -2,7 +2,8 @@ bin
 .vscode
 .prettierrc.json
 .eslintrc.json
-.markdownling.json
+.markdownlint.json
+jest.config.js
 tsconfig.json
 tests
 .circleci
