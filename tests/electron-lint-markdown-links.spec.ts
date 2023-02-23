@@ -14,7 +14,7 @@ function runLintMarkdownLinks(...args: string[]) {
 describe('electron-lint-markdown-links', () => {
   it('requires --root', () => {
     const { status, stdout } = runLintMarkdownLinks(
-      path.resolve(FIXTURES_DIR, 'broken-internal-link.md'),
+      'broken-internal-link.md',
     );
 
     expect(stdout.toString('utf-8')).toContain('Usage');
@@ -25,7 +25,7 @@ describe('electron-lint-markdown-links', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
-      path.resolve(FIXTURES_DIR, 'broken-internal-link.md'),
+      'broken-internal-link.md',
     );
 
     expect(stdout.toString('utf-8')).toContain('Broken link');
@@ -38,7 +38,7 @@ describe('electron-lint-markdown-links', () => {
       FIXTURES_DIR,
       '--ignore',
       '**/broken-*-link.md',
-      path.resolve(FIXTURES_DIR, '*.md'),
+      '*.md',
     );
 
     expect(status).toEqual(0);
@@ -52,7 +52,7 @@ describe('electron-lint-markdown-links', () => {
       '**/broken-{external,internal}-link.md',
       '--ignore',
       '**/broken-cross-file-link.md',
-      path.resolve(FIXTURES_DIR, '*.md'),
+      '*.md',
     );
 
     expect(status).toEqual(0);
@@ -64,7 +64,7 @@ describe('electron-lint-markdown-links', () => {
       FIXTURES_DIR,
       '--ignore-path',
       path.resolve(FIXTURES_DIR, 'ignorepaths'),
-      path.resolve(FIXTURES_DIR, '*.md'),
+      '*.md',
     );
 
     expect(status).toEqual(0);
@@ -74,7 +74,7 @@ describe('electron-lint-markdown-links', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
-      path.resolve(FIXTURES_DIR, 'broken-cross-file-link.md'),
+      'broken-cross-file-link.md'
     );
 
     expect(stdout.toString('utf-8')).toContain('Broken link');
@@ -85,7 +85,7 @@ describe('electron-lint-markdown-links', () => {
     const { status } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
-      path.resolve(FIXTURES_DIR, 'broken-external-link.md'),
+      'broken-external-link.md'
     );
 
     expect(status).toEqual(0);
@@ -96,7 +96,7 @@ describe('electron-lint-markdown-links', () => {
       '--root',
       FIXTURES_DIR,
       '--fetch-external-links',
-      path.resolve(FIXTURES_DIR, 'broken-external-link.md'),
+      'broken-external-link.md'
     );
 
     expect(stdout.toString('utf-8')).toContain('Broken link');
@@ -109,7 +109,7 @@ describe('electron-lint-markdown-links', () => {
       FIXTURES_DIR,
       '--fetch-external-links',
       '--check-redirects',
-      path.resolve(FIXTURES_DIR, 'redirected-external-link.md'),
+      'redirected-external-link.md'
     );
 
     expect(stdout.toString('utf-8')).toContain('Link redirection');

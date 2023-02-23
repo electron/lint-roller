@@ -101,7 +101,7 @@ export class DocsWorkspace implements IWorkspace {
 
   async getAllMarkdownDocuments(): Promise<Iterable<ITextDocument>> {
     const files = this.globs.flatMap((pattern) =>
-      glob.sync(pattern, { ignore: this.ignoreGlobs, absolute: true }),
+      glob.sync(pattern, { ignore: this.ignoreGlobs, absolute: true, cwd: this.root }),
     );
 
     for (const file of files) {
