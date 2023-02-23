@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 
 import {
@@ -174,7 +173,7 @@ if (require.main === module) {
   if (opts['ignore-path']) {
     const ignores = fs.readFileSync(path.resolve(opts['ignore-path']), { encoding: 'utf-8' });
 
-    for (const ignore of ignores.split(os.EOL)) {
+    for (const ignore of ignores.split('\n')) {
       opts.ignore.push(ignore.trimEnd());
     }
   }
