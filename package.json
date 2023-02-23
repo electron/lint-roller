@@ -1,6 +1,6 @@
 {
   "name": "@dsanders11/markdown-linting",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Markdown linting helpers for Electron org repos",
   "bin": {
     "electron-markdownlint": "./dist/bin/markdownlint-cli-wrapper.js",
