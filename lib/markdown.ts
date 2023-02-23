@@ -129,14 +129,18 @@ export class DocsWorkspace implements IWorkspace {
 
   async openMarkdownDocument(resource: URI) {
     if (!this.documentCache.has(resource.path)) {
-      const document = TextDocument.create(
-        resource.toString(),
-        'markdown',
-        1,
-        fs.readFileSync(resource.path, 'utf8'),
-      );
+      try {
+        const document = TextDocument.create(
+          resource.toString(),
+          'markdown',
+          1,
+          fs.readFileSync(resource.path, 'utf8'),
+        );
 
-      this.documentCache.set(resource.path, document);
+        this.documentCache.set(resource.path, document);
+      } catch {
+        return undefined;
+      }
     }
 
     return this.documentCache.get(resource.path);
