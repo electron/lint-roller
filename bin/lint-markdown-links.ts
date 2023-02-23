@@ -108,7 +108,10 @@ async function main(
       );
 
       if (diagnostics.length) {
-        console.log('File Location:', path.relative(workspace.root, URI.parse(document.uri).path));
+        console.log(
+          'File Location:',
+          path.relative(URI.file(workspace.root).path, URI.parse(document.uri).path),
+        );
       }
 
       for (const diagnostic of diagnostics) {
