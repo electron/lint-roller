@@ -119,7 +119,7 @@ export class DocsWorkspace implements IWorkspace {
   }
 
   hasMarkdownDocument(resource: URI) {
-    const relativePath = path.relative(this.root, resource.path);
+    const relativePath = path.relative(URI.file(this.root).path, resource.path);
     return (
       !relativePath.startsWith('..') &&
       !path.isAbsolute(relativePath) &&
