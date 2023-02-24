@@ -2,6 +2,9 @@
   "name": "@dsanders11/markdown-linting",
   "version": "1.0.2",
   "description": "Markdown linting helpers for Electron org repos",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "bin": {
     "electron-markdownlint": "./dist/bin/markdownlint-cli-wrapper.js",
     "electron-lint-markdown-links": "./dist/bin/lint-markdown-links.js"
