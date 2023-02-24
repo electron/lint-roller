@@ -11,7 +11,7 @@
 yarn global add @electron/lint-roller
 
 electron-markdownlint "**/*.md"
-electron-lint-markdown-links --root docs/
+electron-lint-markdown-links --root docs/ "docs/**/*.md"
 ```
 
 ## What It Provides
