@@ -1,14 +1,14 @@
-# @dsanders11/markdown-linting
+# @electron/lint-roller
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/dsanders11/markdown-linting/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/dsanders11/markdown-linting/tree/main)
-[![npm version](http://img.shields.io/npm/v/@dsanders11/markdown-linting.svg)](https://npmjs.org/package/@dsanders11/markdown-linting)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/electron/lint-roller/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/electron/lint-roller/tree/main)
+[![npm version](http://img.shields.io/npm/v/@electron/lint-roller.svg)](https://npmjs.org/package/@electron/lint-roller)
 
 > Markdown linting helpers for Electron org repos
 
 ## Usage
 
 ```bash
-yarn global add @dsanders11/markdown-linting
+yarn global add @electron/lint-roller
 
 electron-markdownlint "**/*.md"
 electron-lint-markdown-links --root docs/
@@ -21,7 +21,7 @@ across repos. To use the base config, extend it in `.markdownlint.json`:
 
 ```json
 {
-  "extends": "@dsanders11/markdown-linting/configs/markdownlint.json"
+  "extends": "@electron/lint-roller/configs/markdownlint.json"
 }
 ```
 

@@ -1,6 +1,6 @@
 {
-  "name": "@dsanders11/markdown-linting",
-  "version": "1.0.2",
+  "name": "@electron/lint-roller",
+  "version": "0.0.0-development",
   "description": "Markdown linting helpers for Electron org repos",
   "engines": {
     "node": ">=14.0.0"
@@ -26,14 +26,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dsanders11/markdown-linting.git"
+    "url": "git+https://github.com/electron/lint-roller.git"
   },
   "author": "David Sanders <dsanders11@ucsbalum.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/dsanders11/markdown-linting/issues"
+    "url": "https://github.com/electron/lint-roller/issues"
   },
-  "homepage": "https://github.com/dsanders11/markdown-linting#readme",
+  "homepage": "https://github.com/electron/lint-roller#readme",
   "devDependencies": {
     "@electron-internal/eslint-config": "^1.0.1",
     "@types/glob": "^8.0.1",
