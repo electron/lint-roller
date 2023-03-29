@@ -8,6 +8,7 @@ import {
   DiagnosticLevel,
   DiagnosticOptions,
   ILogger,
+  LogLevel,
 } from '@dsanders11/vscode-markdown-languageservice';
 import * as minimist from 'minimist';
 import fetch from 'node-fetch';
@@ -17,6 +18,8 @@ import { URI } from 'vscode-uri';
 import { DocsWorkspace, MarkdownLinkComputer, MarkdownParser } from '../lib/markdown';
 
 class NoOpLogger implements ILogger {
+  readonly level = LogLevel.Off;
+
   log(): void {}
 }
 

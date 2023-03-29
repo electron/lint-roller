@@ -331,10 +331,10 @@
     semver "^7.1.2"
     tempy "^1.0.0"
 
-"@dsanders11/vscode-markdown-languageservice@^0.3.0-alpha.4":
-  version "0.3.0-alpha.4"
-  resolved "https://registry.yarnpkg.com/@dsanders11/vscode-markdown-languageservice/-/vscode-markdown-languageservice-0.3.0-alpha.4.tgz#cd80b82142a2c10e09b5f36a93c3ea65b7d2a7f9"
-  integrity sha512-MHp/CniEkzJb1CAw/bHwucuImaICrcIuohEFamTW8sJC2jhKCnbYblwJFZ3OOS3wTYZbzFIa8WZ4Dn5yL2E7jg==
+"@dsanders11/vscode-markdown-languageservice@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@dsanders11/vscode-markdown-languageservice/-/vscode-markdown-languageservice-0.3.0.tgz#18a561711609651371961b66db4cb8473ab25564"
+  integrity sha512-aFNWtK23dNicyLczBwIKkGUSVuMoZMzUovlwqj/hVZ3zRIBlXWYunByDxI67Pf1maA0TbxPjVfRqBQFALWjVHg==
   dependencies:
     "@vscode/l10n" "^0.0.10"
     picomatch "^2.3.1"
