@@ -119,36 +119,36 @@ export class DocsWorkspace implements IWorkspace {
   }
 
   hasMarkdownDocument(resource: URI) {
-    const relativePath = path.relative(URI.file(this.root).path, resource.path);
+    const relativePath = path.relative(path.resolve(this.root), resource.fsPath);
     return (
       !relativePath.startsWith('..') &&
       !path.isAbsolute(relativePath) &&
-      fs.existsSync(resource.path)
+      fs.existsSync(resource.fsPath)
     );
   }
 
   async openMarkdownDocument(resource: URI) {
-    if (!this.documentCache.has(resource.path)) {
+    if (!this.documentCache.has(resource.fsPath)) {
       try {
         const document = TextDocument.create(
           resource.toString(),
           'markdown',
           1,
-          fs.readFileSync(resource.path, 'utf8'),
+          fs.readFileSync(resource.fsPath, 'utf8'),
         );
 
-        this.documentCache.set(resource.path, document);
+        this.documentCache.set(resource.fsPath, document);
       } catch {
         return undefined;
       }
     }
 
-    return this.documentCache.get(resource.path);
+    return this.documentCache.get(resource.fsPath);
   }
 
   async stat(resource: URI): Promise<FileStat | undefined> {
     if (this.hasMarkdownDocument(resource)) {
-      const stats = fs.statSync(resource.path);
+      const stats = fs.statSync(resource.fsPath);
       return { isDirectory: stats.isDirectory() };
     }
 

@@ -37,7 +37,7 @@ describe('electron-lint-markdown-links', () => {
       '--root',
       FIXTURES_DIR,
       '--ignore',
-      '**/broken-*-link.md',
+      '**/{broken,valid}-*-link.md',
       '*.md',
     );
 
@@ -51,7 +51,7 @@ describe('electron-lint-markdown-links', () => {
       '--ignore',
       '**/broken-{external,internal}-link.md',
       '--ignore',
-      '**/broken-cross-file-link.md',
+      '**/{broken,valid}-cross-file-link.md',
       '*.md',
     );
 
@@ -79,6 +79,17 @@ describe('electron-lint-markdown-links', () => {
 
     expect(stdout.toString('utf-8')).toContain('Broken link');
     expect(status).toEqual(1);
+  });
+
+  it('should allow valid cross-file links', () => {
+    const { status, stdout } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      'valid-cross-file-link.md'
+    );
+
+    expect(stdout.toString('utf-8')).toEqual(expect.not.stringContaining('Broken link'));
+    expect(status).toEqual(0);
   });
 
   it('should by default ignore broken external links', () => {
