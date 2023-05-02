@@ -21,10 +21,12 @@ import { Emitter, Range } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 
-import type { Definition, ImageReference, Link, LinkReference } from 'mdast';
+import type { Code, Definition, ImageReference, Link, LinkReference } from 'mdast';
 import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import type { Node, Position } from 'unist';
 import type { visit as VisitFunction } from 'unist-util-visit';
+
+export type { Code };
 
 // Helper function to work around import issues with ESM modules and ts-node
 // eslint-disable-next-line no-new-func
@@ -99,7 +101,7 @@ export class DocsWorkspace implements IWorkspace {
     return [URI.file(this.root)];
   }
 
-  async getAllMarkdownDocuments(): Promise<Iterable<ITextDocument>> {
+  async getAllMarkdownDocuments(): Promise<Iterable<TextDocument>> {
     const files = this.globs.flatMap((pattern) =>
       glob.sync(pattern, { ignore: this.ignoreGlobs, absolute: true, cwd: this.root }),
     );
@@ -119,12 +121,16 @@ export class DocsWorkspace implements IWorkspace {
   }
 
   hasMarkdownDocument(resource: URI) {
-    const relativePath = path.relative(path.resolve(this.root), resource.fsPath);
+    const relativePath = this.getWorkspaceRelativePath(resource);
     return (
       !relativePath.startsWith('..') &&
       !path.isAbsolute(relativePath) &&
       fs.existsSync(resource.fsPath)
     );
+  }
+
+  getWorkspaceRelativePath(resource: URI) {
+    return path.relative(path.resolve(this.root), resource.fsPath);
   }
 
   async openMarkdownDocument(resource: URI) {
@@ -329,4 +335,27 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
 
     return links;
   }
+}
+
+export async function getCodeBlocks(document: ITextDocument): Promise<Code[]> {
+  const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
+    fromMarkdown: typeof FromMarkdownFunction;
+  };
+  const { visit } = (await dynamicImport('unist-util-visit')) as {
+    visit: typeof VisitFunction;
+  };
+
+  const tree = fromMarkdown(document.getText());
+
+  const codeBlocks: Code[] = [];
+
+  visit(
+    tree,
+    (node) => node.type === 'code',
+    (node: Node) => {
+      codeBlocks.push(node as Code);
+    },
+  );
+
+  return codeBlocks;
 }

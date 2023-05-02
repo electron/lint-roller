@@ -1,0 +1,139 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`electron-lint-markdown-standard can detect errors in code blocks 1`] = `
+"
+   dirty.md
+         6:1:      Unexpected var, use let or const instead.
+         6:12:     Extra semicolon.
+         20:1:     Unexpected var, use let or const instead.
+         20:12:    Extra semicolon.
+         21:9:     Expected '===' and instead saw '=='.
+         21:27:    Strings must use singlequote.
+         21:40:    Extra semicolon.
+         27:1:     Unexpected var, use let or const instead.
+         27:12:    Extra semicolon.
+         28:9:     Expected '===' and instead saw '=='.
+         28:27:    Strings must use singlequote.
+         28:40:    Extra semicolon.
+         33:1:     Code block language identifier should be all lowercase
+         34:1:     Unexpected var, use let or const instead.
+         34:12:    Extra semicolon.
+
+There are 15 errors in '<root>'
+"
+`;
+
+exports[`electron-lint-markdown-standard can fix cleanable errors with --fix option 1`] = `
+"# The Cleanable Readme
+
+This is a markdown file with some javascript code blocks in it.
+
+\`\`\`js
+const foo = 1
+\`\`\`
+
+Each block is parsed separately, to avoid linting errors about variable
+assignment. Notice that \`var foo\` occurs twice in this markdown file,
+but only once in each individual snippet.
+
+The following code block has a few issues:
+
+- semicolons
+- type-insensitive equality comparison
+- double-quoted string
+
+\`\`\`javascript
+const foo = 2
+console.log('foo is two')
+\`\`\`
+
+Same as before, but with metadata:
+
+\`\`\`javascript title='main.js'
+const foo = 2
+console.log('foo is two')
+\`\`\`
+
+This non-js code block should be ignored by the cleaner and the linter:
+
+\`\`\`sh
+echo i am a shell command
+\`\`\`
+
+It should allow orphan objects:
+
+\`\`\`js
+{ some: 'object' }
+\`\`\`
+
+and this wrapping kind too:
+
+\`\`\`js
+{
+  some: 'object',
+  with: 'different whitespace and tabbing'
+}
+\`\`\`
+
+and arrays:
+
+\`\`\`js
+[1, 2, 3]
+\`\`\`
+
+and wrapped arrays:
+
+\`\`\`js
+[
+  4,
+  5,
+  6
+]
+\`\`\`
+"
+`;
+
+exports[`electron-lint-markdown-standard outputs uncleanable errors with --fix option 1`] = `
+"# The Dirty Readme
+
+This is a markdown file with some javascript code blocks in it.
+
+\`\`\`js
+const foo = 1
+\`\`\`
+
+Each block is parsed separately, to avoid linting errors about variable
+assignment. Notice that \`var foo\` occurs twice in this markdown file,
+but only once in each individual snippet.
+
+The following code block has a few issues:
+
+- semicolons
+- type-insensitive equality comparison
+- double-quoted string
+
+\`\`\`javascript
+const foo = 2
+if (foo == 1) console.log('foo is one')
+\`\`\`
+
+Same as before, but with metadata:
+
+\`\`\`javascript title='main.js'
+const foo = 2
+if (foo == 1) console.log('foo is one')
+\`\`\`
+
+Blocks should have lowercase language identifiers:
+
+\`\`\`JavaScript
+const foo = 3
+\`\`\`
+
+This non-js code block should be ignored by the linter:
+
+\`\`\`sh
+echo i am a shell command
+\`\`\`
+"
+`;
