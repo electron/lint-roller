@@ -144,7 +144,7 @@ function parseCommandLine() {
     if (!arg || arg.startsWith('-')) {
       console.log(
         'Usage: electron-lint-markdown-links --root <dir> <globs> [-h|--help] [--fetch-external-links] ' +
-          '[--check-redirects [--ignore <globs>]',
+          '[--check-redirects] [--ignore <globs>]',
       );
       process.exit(1);
     }
@@ -155,7 +155,6 @@ function parseCommandLine() {
   const opts = minimist(process.argv.slice(2), {
     boolean: ['help', 'fetch-external-links', 'check-redirects'],
     string: ['root', 'ignore', 'ignore-path'],
-    stopEarly: true,
     unknown: showUsage,
   });
 

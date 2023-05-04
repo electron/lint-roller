@@ -120,4 +120,16 @@ describe('electron-lint-markdown-links', () => {
     expect(stdout.toString('utf-8')).toContain('Link redirection');
     expect(status).toEqual(0);
   });
+
+  it('should accept options after the globs', () => {
+    const { status, stdout } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      'broken-external-link.md',
+      '--fetch-external-links',
+    );
+
+    expect(stdout.toString('utf-8')).toContain('Broken link');
+    expect(status).toEqual(1);
+  });
 });
