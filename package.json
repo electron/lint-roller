@@ -15,11 +15,11 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "yarn run build",
-    "lint:eslint": "eslint \"{bin,lib,markdownlint-rules}/**/*.{js,ts}\"",
-    "lint:eslint:fix": "eslint --fix \"{bin,lib,markdownlint-rules}/**/*.{js,ts}\"",
+    "lint:eslint": "eslint \"{bin,lib,markdownlint-rules,tests}/**/*.{js,ts}\"",
+    "lint:eslint:fix": "eslint --fix \"{bin,lib,markdownlint-rules,tests}/**/*.{js,ts}\"",
     "lint:markdown": "yarn run build && node ./dist/bin/markdownlint-cli-wrapper.js \"*.md\" && node ./dist/bin/lint-markdown-links.js --root . \"*.md\"",
-    "lint:prettier": "prettier --check \"{bin,lib,markdownlint-rules}/**/*.{js,ts}\"",
-    "lint:prettier:fix": "prettier --write \"{bin,lib,markdownlint-rules}/**/*.{js,ts}\"",
+    "lint:prettier": "prettier --check \"{bin,lib,markdownlint-rules,tests}/**/*.{js,ts}\"",
+    "lint:prettier:fix": "prettier --write \"{bin,lib,markdownlint-rules,tests}/**/*.{js,ts}\"",
     "lint": "yarn run lint:prettier && yarn run lint:markdown",
     "lint:fix": "yarn run lint:eslint:fix && yarn run lint:prettier:fix",
     "test": "yarn run build && jest"
