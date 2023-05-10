@@ -1,3 +1,5 @@
 **/broken-{external,internal}-link.md
 **/broken-cross-file-link.md
 **/valid-cross-file-link.md
+**/cleanable.md
+**/dirty.md
