@@ -111,25 +111,37 @@ async function main(
           }
 
           const line = codeBlock.position!.start.line - 1;
-          const lineInfo = `${line + message.line}:${message.column}: `.padEnd(10);
+          const indent = codeBlock.position!.start.column - 1;
+          const lineInfo = `${line + message.line}:${indent + message.column}: `.padEnd(10);
           console.log(`         ${lineInfo}${message.message}`);
         }
 
         if (fix && result.output) {
-          const newText = removeParensWrappingOrphanedObject(
+          const position = codeBlock.position!;
+          let newText = removeParensWrappingOrphanedObject(
             result.output.slice(`${eslintDisable}\n`.length),
           );
+
+          // Code block might be indented - only indent non-blank lines
+          if (position.start.column > 1) {
+            newText = newText
+              .split('\n')
+              .map((line) =>
+                line.length ? line.padStart(line.length + position.start.column - 1) : line,
+              )
+              .join('\n');
+          }
 
           // The code block position includes the surrounding code fence,
           // so use the line numbers inside of the code fence. Note that
           // the code block positions are 1-based, but Range uses 0-based
           const range: Range = {
             start: {
-              line: codeBlock.position!.start.line,
+              line: position.start.line,
               character: 0,
             },
             end: {
-              line: codeBlock.position!.end.line - 2,
+              line: position.end.line - 2,
               character: Number.POSITIVE_INFINITY,
             },
           };
