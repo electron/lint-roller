@@ -102,7 +102,7 @@ describe('electron-lint-markdown-standard', () => {
       ).toMatchSnapshot();
       expect(stdout).toContain('File has changed: dirty.md');
       expect(stdout).toContain("Expected '===' and instead saw '=='");
-      expect(stdout).toContain('There are 3 errors');
+      expect(stdout).toContain('There are 4 errors');
       expect(status).toEqual(1);
     } finally {
       await fs.rm(tmpdir, { recursive: true, force: true });

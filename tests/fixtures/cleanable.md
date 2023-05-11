@@ -28,6 +28,13 @@ var foo = 2;
 console.log("foo is two");
 ```
 
+1. Same as before, but indented
+
+   ```javascript title='main.js'
+   var foo = 2;
+   console.log("foo is two");
+   ```
+
 This non-js code block should be ignored by the cleaner and the linter:
 
 ```sh

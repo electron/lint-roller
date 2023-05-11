@@ -15,11 +15,16 @@ exports[`electron-lint-markdown-standard can detect errors in code blocks 1`] = 
          28:9:     Expected '===' and instead saw '=='.
          28:27:    Strings must use singlequote.
          28:40:    Extra semicolon.
-         33:1:     Code block language identifier should be all lowercase
-         34:1:     Unexpected var, use let or const instead.
-         34:12:    Extra semicolon.
+         34:4:     Unexpected var, use let or const instead.
+         34:15:    Extra semicolon.
+         35:12:    Expected '===' and instead saw '=='.
+         35:30:    Strings must use singlequote.
+         35:43:    Extra semicolon.
+         40:1:     Code block language identifier should be all lowercase
+         41:1:     Unexpected var, use let or const instead.
+         41:12:    Extra semicolon.
 
-There are 15 errors in '<root>'
+There are 20 errors in '<root>'
 "
 `;
 
@@ -53,6 +58,13 @@ Same as before, but with metadata:
 const foo = 2
 console.log('foo is two')
 \`\`\`
+
+1. Same as before, but indented
+
+   \`\`\`javascript title='main.js'
+   const foo = 2
+   console.log('foo is two')
+   \`\`\`
 
 This non-js code block should be ignored by the cleaner and the linter:
 
@@ -123,6 +135,13 @@ Same as before, but with metadata:
 const foo = 2
 if (foo == 1) console.log('foo is one')
 \`\`\`
+
+1. Same as before, but indented
+
+   \`\`\`javascript title='main.js'
+   const foo = 2
+   if (foo == 1) console.log('foo is one')
+   \`\`\`
 
 Blocks should have lowercase language identifiers:
 

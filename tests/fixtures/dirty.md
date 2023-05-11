@@ -28,6 +28,13 @@ var foo = 2;
 if (foo == 1) console.log("foo is one");
 ```
 
+1. Same as before, but indented
+
+   ```javascript title='main.js'
+   var foo = 2;
+   if (foo == 1) console.log("foo is one");
+   ```
+
 Blocks should have lowercase language identifiers:
 
 ```JavaScript
