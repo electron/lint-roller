@@ -8,7 +8,8 @@
   "bin": {
     "electron-markdownlint": "./dist/bin/markdownlint-cli-wrapper.js",
     "electron-lint-markdown-links": "./dist/bin/lint-markdown-links.js",
-    "electron-lint-markdown-standard": "./dist/bin/lint-markdown-standard.js"
+    "electron-lint-markdown-standard": "./dist/bin/lint-markdown-standard.js",
+    "electron-lint-markdown-ts-check": "./dist/bin/lint-markdown-ts-check.js"
   },
   "directories": {
     "lib": "lib"
@@ -60,10 +61,14 @@
     "mdast-util-from-markdown": "^1.3.0",
     "minimist": "^1.2.8",
     "node-fetch": "^2.6.9",
+    "rimraf": "^4.4.1",
     "standard": "^17.0.0",
     "unist-util-visit": "^4.1.2",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8",
     "vscode-uri": "^3.0.7"
+  },
+  "peerDependencies": {
+    "typescript": "^4.5.5"
   }
 }

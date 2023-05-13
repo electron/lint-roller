@@ -8,6 +8,11 @@ import * as minimist from 'minimist';
 import { TextDocument, TextEdit, Range } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 
+import {
+  dynamicImport,
+  removeParensWrappingOrphanedObject,
+  wrapOrphanObjectInParens,
+} from '../lib/helpers';
 import { getCodeBlocks, DocsWorkspace } from '../lib/markdown';
 
 interface Options {
@@ -38,20 +43,6 @@ const DISABLED_RULES = [
   'no-unused-vars',
   'n/no-callback-literal',
 ];
-
-// Helper function to work around import issues with ESM module
-// eslint-disable-next-line no-new-func
-const dynamicImport = new Function('specifier', 'return import(specifier)');
-
-// From zeke/standard-markdown
-function removeParensWrappingOrphanedObject(block: string) {
-  return block.replace(/^\(([{|[][\s\S]+[}|\]])\)$/gm, '$1');
-}
-
-// From zeke/standard-markdown
-function wrapOrphanObjectInParens(block: string) {
-  return block.replace(/^([{|[][\s\S]+[}|\]])$/gm, '($1)');
-}
 
 async function main(
   workspaceRoot: string,
