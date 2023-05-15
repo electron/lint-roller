@@ -73,7 +73,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         const tsIgnoreLines = codeBlock.meta
           ?.match(/\B@ts-ignore=\[([\d,]*)\]\B/)?.[1]
           .split(',')
-          .map(parseInt);
+          .map((line) => parseInt(line));
 
         if (tsNoCheck && tsIgnoreLines) {
           console.log(
@@ -95,14 +95,28 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
           continue;
         }
 
+        const codeLines = codeBlock.value.split('\n');
+        let firstLineIsTsIgnore = false;
+
         // Blocks can have @ts-ignore=[1,10,50] in their info string
         // (1-based lines) to insert an "// @ts-ignore" comment before
         // specified lines, in order to ignore specific lines (like
         // requires of extra modules) without skipping the whole block
-        const codeLines = codeBlock.value.split('\n');
-
         for (const line of tsIgnoreLines ?? []) {
-          codeLines.splice(line - 1, 0, '// @ts-ignore');
+          // Inserting additional lines will make the tsc output
+          // incorrect which would be a pain to manually adjust,
+          // and there is no @ts-ignore-line, so tack the comment
+          // on to the end of the previous line - looks ugly but
+          // we never have to see it since it's in a temp file.
+          // The first line of the file is an edge case where an
+          // insertion is necessary, so take that into account
+          if (line === 1) {
+            codeLines.unshift('// @ts-ignore');
+            firstLineIsTsIgnore = true;
+          } else {
+            const offset = firstLineIsTsIgnore ? 1 : 2;
+            codeLines[line - offset] = `${codeLines[line - offset]} // @ts-ignore`;
+          }
         }
 
         // Indent the lines if necessary so that tsc output is accurate
@@ -120,7 +134,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
 
         // Insert the necessary number of blank lines so that the line
         // numbers in output from tsc is accurate to the original file
-        const blankLines = '\n'.repeat(line - 3);
+        const blankLines = '\n'.repeat(firstLineIsTsIgnore ? line - 4 : line - 3);
 
         // Filename is unique since it is the name of the original Markdown
         // file, with the starting line number of the codeblock appended
@@ -154,6 +168,9 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         ),
         '',
       );
+
+      // Strip any @ts-ignore comments we added
+      correctedOutput = correctedOutput.replace(/ \/\/ @ts-ignore/g, '');
 
       if (correctedOutput.trim()) {
         for (const [filename, originalFilename] of originalFilenames.entries()) {
