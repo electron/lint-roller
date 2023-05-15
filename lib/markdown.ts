@@ -21,16 +21,14 @@ import { Emitter, Range } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 
+import { dynamicImport } from './helpers';
+
 import type { Code, Definition, ImageReference, Link, LinkReference } from 'mdast';
 import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import type { Node, Position } from 'unist';
 import type { visit as VisitFunction } from 'unist-util-visit';
 
 export type { Code };
-
-// Helper function to work around import issues with ESM modules and ts-node
-// eslint-disable-next-line no-new-func
-const dynamicImport = new Function('specifier', 'return import(specifier)');
 
 // Helper function from `vscode-markdown-languageservice` codebase
 function tryDecodeUri(str: string): string {

@@ -1,3 +1,4 @@
 {
-  "extends": ["@electron-internal", "prettier"]
+  "extends": ["@electron-internal", "prettier"],
+  "ignorePatterns": ["electron.d.ts"]
 }
