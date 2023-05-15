@@ -46,7 +46,6 @@ const DEFAULT_IMPORTS = `${NODE_IMPORTS}; const { ${ELECTRON_MODULES.join(
 // not tied to Electron - will require passing in the list of modules
 // as a CLI option, probably a file since there's a lot of info
 async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }: Options) {
-  const isWindows = os.platform() === 'win32';
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'electron-ts-check-'));
 
@@ -139,13 +138,9 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
     }
 
     for (const chunk of chunkFilenames(filenames)) {
-      const command = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
-      const args = ['--noEmit', '--checkJs', '--pretty', ...chunk];
-      const { status, stderr, stdout } = await spawnAsync(
-        isWindows ? `"${process.execPath}"` : command,
-        isWindows ? [command, ...args] : args,
-        { shell: isWindows },
-      );
+      const tscExec = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
+      const args = [tscExec, '--noEmit', '--checkJs', '--pretty', ...chunk];
+      const { status, stderr, stdout } = await spawnAsync(process.execPath, args);
 
       if (stderr) {
         throw new Error(stderr);
