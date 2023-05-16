@@ -40,7 +40,7 @@ const NODE_IMPORTS = "const fs = require('node:fs'); const path = require('node:
 
 const DEFAULT_IMPORTS = `${NODE_IMPORTS}; const { ${ELECTRON_MODULES.join(
   ', ',
-)} } = require('electron')`;
+)} } = require('electron');`;
 
 // TODO(dsanders11): Refactor to make this script general purpose and
 // not tied to Electron - will require passing in the list of modules
