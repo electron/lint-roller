@@ -23,14 +23,20 @@ ts-check.md:43:1: Code block has both @ts-nocheck and @ts-ignore, they conflict
 [7m8[0m console.foo('whoops')
 [7m [0m [91m        ~~~[0m
 
+[96mts-check.md[0m:[93m83[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'myAwesomeAPI' does not exist on type 'Window & typeof globalThis'.
 
-Found 4 errors in 4 files.
+[7m83[0m window.myAwesomeAPI()
+[7m  [0m [91m       ~~~~~~~~~~~~[0m
+
+
+Found 5 errors in 5 files.
 
 Errors  Files
      1  ts-check.md[90m:4[0m
      1  ts-check.md[90m:54[0m
      1  ts-check.md[90m:60[0m
      1  ts-check.md[90m:8[0m
+     1  ts-check.md[90m:83[0m
 
 "
 `;

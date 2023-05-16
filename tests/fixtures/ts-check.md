@@ -59,3 +59,27 @@ const { BrowserWindow } = require('electron')
 
 BrowserWindow.wrongAPI('foo')
 ```
+
+These blocks have multiple @ts-ignore lines
+
+```js @ts-ignore=[3,5]
+console.log('test')
+
+window.myAwesomeAPI()
+
+window.myOtherAwesomeAPI()
+```
+
+```js @ts-ignore=[1,4]
+window.myAwesomeAPI()
+
+console.log('test')
+window.myOtherAwesomeAPI()
+```
+
+This confirms @ts-ignore output is stripped
+
+```js @ts-ignore=[2]
+window.myAwesomeAPI()
+window.myOtherAwesomeAPI()
+```
