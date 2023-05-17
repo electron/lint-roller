@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -58,6 +59,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
     // Copy over the typings so that a relative path can be used
     fs.copyFileSync(path.join(process.cwd(), 'electron.d.ts'), path.join(tempDir, 'electron.d.ts'));
 
+    let ambientModules = '';
     let errors = false;
 
     for (const document of await workspace.getAllMarkdownDocuments()) {
@@ -76,12 +78,15 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
           ?.match(/\B@ts-ignore=\[([\d,]*)\]\B/)?.[1]
           .split(',')
           .map((line) => parseInt(line));
+        const tsTypeLines = Array.from(
+          codeBlock.meta?.matchAll(/\B@ts-type={([^:\r\n\t\f\v ]+):\s?([^}]+)}\B/g) ?? [],
+        );
 
-        if (tsNoCheck && tsIgnoreLines) {
+        if (tsNoCheck && (tsIgnoreLines || tsTypeLines.length)) {
           console.log(
             `${filepath}:${line}:${
               indent + 1
-            }: Code block has both @ts-nocheck and @ts-ignore, they conflict`,
+            }: Code block has both @ts-nocheck and @ts-ignore/@ts-type, they conflict`,
           );
           errors = true;
           continue;
@@ -99,6 +104,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
 
         const codeLines = codeBlock.value.split('\n');
         let firstLineIsTsIgnore = false;
+        let types = '';
 
         // Blocks can have @ts-ignore=[1,10,50] in their info string
         // (1-based lines) to insert an "// @ts-ignore" comment before
@@ -139,11 +145,10 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         // imports so that most snippets will have what they need.
         // This isn't foolproof and might cause name conflicts
         const imports = codeBlock.value.includes(' require(') ? '' : DEFAULT_IMPORTS;
-        const types = '/// <reference path="electron.d.ts" />';
 
         // Insert the necessary number of blank lines so that the line
         // numbers in output from tsc is accurate to the original file
-        const blankLines = '\n'.repeat(firstLineIsTsIgnore ? line - 4 : line - 3);
+        const blankLines = '\n'.repeat(firstLineIsTsIgnore ? line - 3 : line - 2);
 
         // Filename is unique since it is the name of the original Markdown
         // file, with the starting line number of the codeblock appended
@@ -153,16 +158,46 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
             .replace(new RegExp(path.sep.replace(/\\/g, '\\\\'), 'g'), '-')
             .replace(/\./g, '-')}-${line}.js`,
         );
-        fs.writeFileSync(filename, `// @ts-check\n${types}\n${imports}\n${blankLines}${code}\n`);
+
+        // Blocks can have @ts-type={name:type} in their info string
+        // (1-based lines) to declare a global variable for a block
+        if (tsTypeLines.length) {
+          // To support this feature, generate a random name for a
+          // module, generate an ambient module declaration for the
+          // module, and then import the global variables we're
+          // defining from that module name - there's no code on
+          // disk for it, only an ambient module declaration which
+          // tsc will use to type the phantom variables being imported
+          const moduleName = crypto.randomBytes(16).toString('hex');
+          const extraTypes = tsTypeLines
+            .map((type) => `  export var ${type[1]}: ${type[2]};`)
+            .join('\n');
+          ambientModules += `declare module "${moduleName}" {\n${extraTypes}\n}\n\n`;
+          types = `const {${tsTypeLines
+            .map((type) => type[1])
+            .join(',')}} = require('${moduleName}')`;
+        }
+
+        fs.writeFileSync(filename, `// @ts-check\n${imports}\n${blankLines}${code}\n${types}`);
 
         filenames.push(filename);
         originalFilenames.set(filename, filepath);
       }
     }
 
+    fs.writeFileSync(path.join(tempDir, 'ambient.d.ts'), ambientModules);
+
     for (const chunk of chunkFilenames(filenames)) {
       const tscExec = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
-      const args = [tscExec, '--noEmit', '--checkJs', '--pretty', ...chunk];
+      const args = [
+        tscExec,
+        '--noEmit',
+        '--checkJs',
+        '--pretty',
+        path.join(tempDir, 'electron.d.ts'),
+        path.join(tempDir, 'ambient.d.ts'),
+        ...chunk,
+      ];
       const { status, stderr, stdout } = await spawnAsync(process.execPath, args);
 
       if (stderr) {
