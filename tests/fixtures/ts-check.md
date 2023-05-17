@@ -83,3 +83,12 @@ This confirms @ts-ignore output is stripped
 window.myAwesomeAPI()
 window.myOtherAwesomeAPI()
 ```
+
+This confirms @ts-ignore works if the previous line is a comment
+
+```js @ts-ignore=[4]
+console.log('test')
+
+// This is a comment
+window.myAwesomeAPI()
+```
