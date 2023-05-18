@@ -33,10 +33,12 @@ const ELECTRON_MODULES = [
   'systemPreferences',
   'Tray',
   'utilityProcess',
+  'webFrame',
   'webFrameMain',
 ];
 
-const NODE_IMPORTS = "const fs = require('node:fs'); const path = require('node:path')";
+const NODE_IMPORTS =
+  "const childProcess = require('node:child_process'); const fs = require('node:fs'); const path = require('node:path')";
 
 const DEFAULT_IMPORTS = `${NODE_IMPORTS}; const { ${ELECTRON_MODULES.join(
   ', ',
