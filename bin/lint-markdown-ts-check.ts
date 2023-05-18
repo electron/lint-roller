@@ -115,7 +115,14 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
             firstLineIsTsIgnore = true;
           } else {
             const offset = firstLineIsTsIgnore ? 1 : 2;
-            codeLines[line - offset] = `${codeLines[line - offset]} // @ts-ignore`;
+            const codeLine = codeLines[line - offset];
+            // If the line is already a comment, fully replace it,
+            // otherwise tsc won't pick up the @ts-ignore comment
+            if (codeLine.match(/^\s*\/\/\s/)) {
+              codeLines[line - offset] = '// @ts-ignore';
+            } else {
+              codeLines[line - offset] = `${codeLine} // @ts-ignore`;
+            }
           }
         }
 
