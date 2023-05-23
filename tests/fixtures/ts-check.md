@@ -92,3 +92,23 @@ console.log('test')
 // This is a comment
 window.myAwesomeAPI()
 ```
+
+This block defines additional types
+
+```js @ts-type={a: number} @ts-type={debug: (url: string) => boolean} @ts-type={b: number}
+if (a > b) {
+  debug('true')
+} else {
+  debug(`not true: ${a} < ${b}`)
+}
+```
+
+This block has undefined variables
+
+```js
+if (a > b) {
+  console.log('true')
+} else {
+  console.log(`not true: ${a} < ${b}`)
+}
+```

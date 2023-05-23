@@ -1,8 +1,28 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`electron-lint-markdown-ts-check should type check code blocks 1`] = `
-"ts-check.md:37:1: Code block has both @ts-nocheck and @ts-ignore, they conflict
-ts-check.md:43:1: Code block has both @ts-nocheck and @ts-ignore, they conflict
+"ts-check.md:37:1: Code block has both @ts-nocheck and @ts-ignore/@ts-type, they conflict
+ts-check.md:43:1: Code block has both @ts-nocheck and @ts-ignore/@ts-type, they conflict
+[96mts-check.md[0m:[93m109[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'a'.
+
+[7m109[0m if (a > b) {
+[7m   [0m [91m    ~[0m
+
+[96mts-check.md[0m:[93m109[0m:[93m9[0m - [91merror[0m[90m TS2304: [0mCannot find name 'b'.
+
+[7m109[0m if (a > b) {
+[7m   [0m [91m        ~[0m
+
+[96mts-check.md[0m:[93m112[0m:[93m28[0m - [91merror[0m[90m TS2304: [0mCannot find name 'a'.
+
+[7m112[0m   console.log(\`not true: \${a} < \${b}\`)
+[7m   [0m [91m                           ~[0m
+
+[96mts-check.md[0m:[93m112[0m:[93m35[0m - [91merror[0m[90m TS2304: [0mCannot find name 'b'.
+
+[7m112[0m   console.log(\`not true: \${a} < \${b}\`)
+[7m   [0m [91m                                  ~[0m
+
 [96mts-check.md[0m:[93m4[0m:[93m9[0m - [91merror[0m[90m TS2339: [0mProperty 'foo' does not exist on type 'Console'.
 
 [7m4[0m console.foo('whoops')
@@ -29,9 +49,10 @@ ts-check.md:43:1: Code block has both @ts-nocheck and @ts-ignore, they conflict
 [7m  [0m [91m       ~~~~~~~~~~~~[0m
 
 
-Found 5 errors in 5 files.
+Found 9 errors in 6 files.
 
 Errors  Files
+     4  ts-check.md[90m:109[0m
      1  ts-check.md[90m:4[0m
      1  ts-check.md[90m:54[0m
      1  ts-check.md[90m:60[0m
