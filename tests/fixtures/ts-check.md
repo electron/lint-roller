@@ -18,7 +18,7 @@ console.bar('whoops')
 console.bar('whoops')
 ```
 
-These blocks ignore specific lines (1-based)
+These blocks suppress specific lines (1-based)
 
 ```js @ts-ignore=[3]
 console.log('test')
@@ -27,6 +27,18 @@ window.myAwesomeAPI()
 ```
 
 ```js title='main.js' @ts-ignore=[3]
+console.log('test')
+
+window.myAwesomeAPI()
+```
+
+```js @ts-expect-error=[3]
+console.log('test')
+
+window.myAwesomeAPI()
+```
+
+```js title='main.js' @ts-expect-error=[3]
 console.log('test')
 
 window.myAwesomeAPI()
@@ -87,6 +99,39 @@ window.myOtherAwesomeAPI()
 This confirms @ts-ignore works if the previous line is a comment
 
 ```js @ts-ignore=[4]
+console.log('test')
+
+// This is a comment
+window.myAwesomeAPI()
+```
+
+These blocks have multiple @ts-expect-error lines
+
+```js @ts-expect-error=[3,5]
+console.log('test')
+
+window.myAwesomeAPI()
+
+window.myOtherAwesomeAPI()
+```
+
+```js @ts-expect-error=[1,4]
+window.myAwesomeAPI()
+
+console.log('test')
+window.myOtherAwesomeAPI()
+```
+
+This confirms @ts-expect-error output is stripped
+
+```js @ts-expect-error=[2]
+window.myAwesomeAPI()
+window.myOtherAwesomeAPI()
+```
+
+This confirms @ts-expect-error works if the previous line is a comment
+
+```js @ts-expect-error=[4]
 console.log('test')
 
 // This is a comment

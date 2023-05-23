@@ -74,6 +74,10 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         const indent = codeBlock.position!.start.column - 1;
 
         const tsNoCheck = codeBlock.meta?.split(' ').includes('@ts-nocheck');
+        const tsExpectErrorLines = codeBlock.meta
+          ?.match(/\B@ts-expect-error=\[([\d,]*)\]\B/)?.[1]
+          .split(',')
+          .map((line) => parseInt(line));
         const tsIgnoreLines = codeBlock.meta
           ?.match(/\B@ts-ignore=\[([\d,]*)\]\B/)?.[1]
           .split(',')
@@ -82,11 +86,26 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
           codeBlock.meta?.matchAll(/\B@ts-type={([^:\r\n\t\f\v ]+):\s?([^}]+)}\B/g) ?? [],
         );
 
-        if (tsNoCheck && (tsIgnoreLines || tsTypeLines.length)) {
+        if (tsNoCheck && (tsExpectErrorLines || tsIgnoreLines || tsTypeLines.length)) {
           console.log(
             `${filepath}:${line}:${
               indent + 1
-            }: Code block has both @ts-nocheck and @ts-ignore/@ts-type, they conflict`,
+            }: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type, they conflict`,
+          );
+          errors = true;
+          continue;
+        }
+
+        // There should be no overlap between @ts-expect-error and @ts-ignore
+        if (
+          tsExpectErrorLines &&
+          tsIgnoreLines &&
+          tsExpectErrorLines.some((line) => tsIgnoreLines.includes(line))
+        ) {
+          console.log(
+            `${filepath}:${line}:${
+              indent + 1
+            }: Code block has both @ts-expect-error and @ts-ignore with same line number(s)`,
           );
           errors = true;
           continue;
@@ -103,14 +122,10 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         }
 
         const codeLines = codeBlock.value.split('\n');
-        let firstLineIsTsIgnore = false;
+        let insertedInitialLine = false;
         let types = '';
 
-        // Blocks can have @ts-ignore=[1,10,50] in their info string
-        // (1-based lines) to insert an "// @ts-ignore" comment before
-        // specified lines, in order to ignore specific lines (like
-        // requires of extra modules) without skipping the whole block
-        for (const line of tsIgnoreLines ?? []) {
+        const insertComment = (comment: string, line: number) => {
           // Inserting additional lines will make the tsc output
           // incorrect which would be a pain to manually adjust,
           // and there is no @ts-ignore-line, so tack the comment
@@ -119,19 +134,32 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
           // The first line of the file is an edge case where an
           // insertion is necessary, so take that into account
           if (line === 1) {
-            codeLines.unshift('// @ts-ignore');
-            firstLineIsTsIgnore = true;
+            codeLines.unshift(comment);
+            insertedInitialLine = true;
           } else {
-            const offset = firstLineIsTsIgnore ? 1 : 2;
+            const offset = insertedInitialLine ? 1 : 2;
             const codeLine = codeLines[line - offset];
             // If the line is already a comment, fully replace it,
-            // otherwise tsc won't pick up the @ts-ignore comment
+            // otherwise tsc won't pick up the inserted comment
             if (codeLine.match(/^\s*\/\/\s/)) {
-              codeLines[line - offset] = '// @ts-ignore';
+              codeLines[line - offset] = comment;
             } else {
-              codeLines[line - offset] = `${codeLine} // @ts-ignore`;
+              codeLines[line - offset] = `${codeLine} ${comment}`;
             }
           }
+        };
+
+        // Blocks can have @ts-ignore=[1,10,50] in their info string
+        // (1-based lines) to insert an "// @ts-ignore" comment before
+        // specified lines, in order to ignore specific lines (like
+        // requires of extra modules) without skipping the whole block
+        for (const line of tsIgnoreLines ?? []) {
+          insertComment('// @ts-ignore', line);
+        }
+
+        // Blocks can also have @ts-expect-error
+        for (const line of tsExpectErrorLines ?? []) {
+          insertComment('// @ts-expect-error', line);
         }
 
         // Indent the lines if necessary so that tsc output is accurate
@@ -148,7 +176,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
 
         // Insert the necessary number of blank lines so that the line
         // numbers in output from tsc is accurate to the original file
-        const blankLines = '\n'.repeat(firstLineIsTsIgnore ? line - 3 : line - 2);
+        const blankLines = '\n'.repeat(insertedInitialLine ? line - 3 : line - 2);
 
         // Filename is unique since it is the name of the original Markdown
         // file, with the starting line number of the codeblock appended
@@ -213,8 +241,8 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         '',
       );
 
-      // Strip any @ts-ignore comments we added
-      correctedOutput = correctedOutput.replace(/ \/\/ @ts-ignore/g, '');
+      // Strip any @ts-expect-error/@ts-ignore comments we added
+      correctedOutput = correctedOutput.replace(/ \/\/ @ts-(?:expect-error|ignore)/g, '');
 
       if (correctedOutput.trim()) {
         for (const [filename, originalFilename] of originalFilenames.entries()) {
