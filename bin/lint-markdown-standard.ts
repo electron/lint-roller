@@ -18,6 +18,7 @@ import { getCodeBlocks, DocsWorkspace } from '../lib/markdown';
 interface Options {
   fix?: boolean;
   ignoreGlobs?: string[];
+  semi?: boolean;
 }
 
 interface LintMessage {
@@ -47,7 +48,7 @@ const DISABLED_RULES = [
 async function main(
   workspaceRoot: string,
   globs: string[],
-  { fix = false, ignoreGlobs = [] }: Options,
+  { fix = false, ignoreGlobs = [], semi = false }: Options,
 ) {
   const { default: standard } = await dynamicImport('standard');
 
@@ -85,10 +86,16 @@ async function main(
         continue;
       }
 
-      const eslintDisable = `/* eslint-disable ${DISABLED_RULES.join(', ')} */`;
+      const eslintComments = [`/* eslint-disable ${DISABLED_RULES.join(', ')} */`];
+      const wrappedText = wrapOrphanObjectInParens(codeBlock.value);
+
+      // Don't enforce semis if it's an orphan object
+      if (semi && wrappedText === codeBlock.value) {
+        eslintComments.push('/* eslint semi: ["error", "always"] */');
+      }
 
       const results: LintResult[] = await standard.lintText(
-        `${eslintDisable}\n${wrapOrphanObjectInParens(codeBlock.value)}\n`,
+        `${eslintComments.join('\n')}\n${wrappedText}\n`,
         fix ? { fix: true } : undefined,
       );
 
@@ -109,8 +116,10 @@ async function main(
 
         if (fix && result.output) {
           const position = codeBlock.position!;
+
+          // Strip off the eslint comments at the start of the text
           let newText = removeParensWrappingOrphanedObject(
-            result.output.slice(`${eslintDisable}\n`.length),
+            result.output.split('\n').slice(eslintComments.length).join('\n'),
           );
 
           // Code block might be indented - only indent non-blank lines
@@ -157,7 +166,7 @@ function parseCommandLine() {
     if (!arg || arg.startsWith('-')) {
       console.log(
         'Usage: electron-lint-markdown-standard --root <dir> <globs> [-h|--help] [--fix]' +
-          '[--ignore <globs>] [--ignore-path <path>]',
+          '[--ignore <globs>] [--ignore-path <path>] [--semi]',
       );
       process.exit(1);
     }
@@ -166,7 +175,7 @@ function parseCommandLine() {
   };
 
   const opts = minimist(process.argv.slice(2), {
-    boolean: ['help', 'fix'],
+    boolean: ['help', 'fix', 'semi'],
     string: ['root', 'ignore', 'ignore-path'],
     unknown: showUsage,
   });
@@ -196,6 +205,7 @@ if (require.main === module) {
   main(path.resolve(process.cwd(), opts.root), opts._, {
     fix: opts.fix,
     ignoreGlobs: opts.ignore,
+    semi: opts.semi,
   })
     .then((errors) => {
       if (errors) process.exit(1);
