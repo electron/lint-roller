@@ -47,6 +47,8 @@ describe('electron-lint-markdown-standard', () => {
       '**/cleanable.md',
       '--ignore',
       '**/dirty.md',
+      '--ignore',
+      '**/semi.md',
       '*.md',
     );
 
@@ -106,6 +108,26 @@ describe('electron-lint-markdown-standard', () => {
       expect(status).toEqual(1);
     } finally {
       await fs.rm(tmpdir, { recursive: true, force: true });
+    }
+  });
+
+  it('can enforce semicolons with --semi', () => {
+    {
+      // Error if there are no semicolons and --semi option set
+      const { status } = runLintMarkdownStandard('--root', FIXTURES_DIR, '--semi', 'clean.md');
+      expect(status).toEqual(1);
+    }
+
+    {
+      // Error if there are semicolons and --semi option NOT set
+      const { status } = runLintMarkdownStandard('--root', FIXTURES_DIR, 'semi.md');
+      expect(status).toEqual(1);
+    }
+
+    {
+      // No error if there are semicolons and --semi option set
+      const { status } = runLintMarkdownStandard('--root', FIXTURES_DIR, '--semi', 'semi.md');
+      expect(status).toEqual(0);
     }
   });
 });
