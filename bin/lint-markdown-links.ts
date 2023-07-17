@@ -143,7 +143,7 @@ function parseCommandLine() {
   const showUsage = (arg?: string): boolean => {
     if (!arg || arg.startsWith('-')) {
       console.log(
-        'Usage: electron-lint-markdown-links --root <dir> <globs> [-h|--help] [--fetch-external-links] ' +
+        'Usage: electron-lint-markdown-links [--root <dir>] <globs> [-h|--help] [--fetch-external-links] ' +
           '[--check-redirects] [--ignore <globs>]',
       );
       process.exit(1);
@@ -158,13 +158,17 @@ function parseCommandLine() {
     unknown: showUsage,
   });
 
-  if (opts.help || !opts.root || !opts._.length) showUsage();
+  if (opts.help || !opts._.length) showUsage();
 
   return opts;
 }
 
 if (require.main === module) {
   const opts = parseCommandLine();
+
+  if (!opts.root) {
+    opts.root = '.';
+  }
 
   if (opts.ignore) {
     opts.ignore = Array.isArray(opts.ignore) ? opts.ignore : [opts.ignore];
