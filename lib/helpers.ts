@@ -1,6 +1,8 @@
 import * as childProcess from 'node:child_process';
 import * as os from 'node:os';
 
+import { range as balancedRange } from 'balanced-match';
+
 // Helper function to work around import issues with ESM module
 // eslint-disable-next-line no-new-func
 export const dynamicImport = new Function('specifier', 'return import(specifier)');
@@ -71,4 +73,24 @@ export function chunkFilenames(filenames: string[], offset: number = 0): string[
     },
     [[]],
   );
+}
+
+export function findCurlyBracedDirectives(directive: string, str: string) {
+  const prefix = `${directive}=`;
+  const matches: string[] = [];
+  let idx = 0;
+
+  while (idx >= 0 && idx < str.length) {
+    idx = str.indexOf(prefix, idx);
+    if (idx >= 0) {
+      idx = idx + prefix.length;
+      const val = str.slice(idx);
+      const range = balancedRange('{', '}', val);
+      if (range) {
+        matches.push(val.slice(range[0] + 1, range[1]).trim());
+      }
+    }
+  }
+
+  return matches;
 }
