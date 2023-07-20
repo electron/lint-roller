@@ -40,7 +40,8 @@ detection of code blocks.
 Markdown with `tsc`. Type checking can be disabled for specific code blocks
 by adding `@ts-nocheck` to the info string, specific lines can be ignored
 by adding `@ts-ignore=[<line1>,<line2>]` to the info string, and additional
-globals can be defined with `@ts-type={name:type}`.
+globals can be defined with `@ts-type={name:type}`. The `Window` object can
+be extended with more types using `@ts-window-type={name:type}`.
 
 ## License
 
