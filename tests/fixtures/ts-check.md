@@ -165,3 +165,50 @@ This block defines additional types on window
 ```js @ts-window-type={AwesomeAPI: { foo: (value: number) => void } }
 window.AwesomeAPI.foo(42)
 ```
+
+These TypeScript blocks have bad usage of Electron APIs
+
+```ts
+const { BrowserWindow } = require('electron')
+
+BrowserWindow.wrongAPI('foo')
+```
+
+```TypeScript
+import { BrowserWindow } from 'electron'
+
+BrowserWindow.wrongAPI('foo')
+```
+
+The first block should be isolated from the third block but the second should not
+
+```typescript
+interface IAwesomeAPI {
+  foo: (number) => void;
+}
+
+declare global {
+  interface Window {
+    AwesomeAPI: IAwesomeAPI;
+  }
+}
+
+window.AwesomeAPI.foo(42)
+```
+
+```typescript @ts-noisolate
+interface IOtherAwesomeAPI {
+  bar: (string) => void;
+}
+
+declare global {
+  interface Window {
+    OtherAwesomeAPI: IOtherAwesomeAPI;
+  }
+}
+```
+
+```ts
+window.AwesomeAPI.foo(42)
+window.OtherAwesomeAPI.bar('baz')
+```
