@@ -9,7 +9,12 @@ import * as minimist from 'minimist';
 import { rimraf } from 'rimraf';
 import { URI } from 'vscode-uri';
 
-import { chunkFilenames, spawnAsync, wrapOrphanObjectInParens } from '../lib/helpers';
+import {
+  chunkFilenames,
+  findCurlyBracedDirectives,
+  spawnAsync,
+  wrapOrphanObjectInParens,
+} from '../lib/helpers';
 import { getCodeBlocks, DocsWorkspace } from '../lib/markdown';
 
 interface Options {
@@ -82,9 +87,11 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
           ?.match(/\B@ts-ignore=\[([\d,]*)\]\B/)?.[1]
           .split(',')
           .map((line) => parseInt(line));
-        const tsTypeLines = Array.from(
-          codeBlock.meta?.matchAll(/\B@ts-type={([^:\r\n\t\f\v ]+):\s?([^}]+)}\B/g) ?? [],
-        );
+        const tsTypeLines = codeBlock.meta
+          ? findCurlyBracedDirectives('@ts-type', codeBlock.meta)
+              .map((directive) => directive.match(/^([^:\r\n\t\f\v ]+):\s?(.+)$/))
+              .filter((directive): directive is RegExpMatchArray => directive !== null)
+          : [];
 
         if (tsNoCheck && (tsExpectErrorLines || tsIgnoreLines || tsTypeLines.length)) {
           console.log(

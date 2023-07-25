@@ -933,6 +933,11 @@
   dependencies:
     "@babel/types" "^7.3.0"
 
+"@types/balanced-match@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@types/balanced-match/-/balanced-match-1.0.3.tgz#14fd1e4175bc45b878ca310739b330d6748f5fd8"
+  integrity sha512-nBZFt2r4snsIMicyNwgdga4wcoJtGRF39xX4Le3GjA2oSJcQlGAD8XrmlRddYcINFK8dypxJEUS6bVgKBQ7FyA==
+
 "@types/debug@^4.0.0":
   version "4.1.7"
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-4.1.7.tgz#7cc0ea761509124709b8b2d1090d8f6c17aadb82"
@@ -1423,6 +1428,11 @@ balanced-match@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
+
+balanced-match@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-2.0.0.tgz#dc70f920d78db8b858535795867bf48f820633d9"
+  integrity sha512-1ugUSr8BHXRnK23KfuYS+gVMC3LB8QGH9W1iGtDPsNWoQbgtXSExkBu2aDR4epiGWZOjZsj6lDl/N/AqqTC3UA==
 
 bin-links@^3.0.3:
   version "3.0.3"

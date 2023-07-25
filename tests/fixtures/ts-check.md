@@ -140,7 +140,7 @@ window.myAwesomeAPI()
 
 This block defines additional types
 
-```js @ts-type={a: number} @ts-type={debug: (url: string) => boolean} @ts-type={b: number}
+```js @ts-type={a: number} @ts-type={anObject: { aProp: string }} @ts-type={debug: (url: string) => boolean} @ts-type={ anotherObject: { foo: { bar: string } } } @ts-type={b: number}
 if (a > b) {
   debug('true')
 } else {
