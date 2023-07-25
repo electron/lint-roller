@@ -50,6 +50,59 @@ const DEFAULT_IMPORTS = `${NODE_IMPORTS}; const { ${ELECTRON_MODULES.join(
   ', ',
 )} } = require('electron');`;
 
+async function typeCheckFiles(
+  tempDir: string,
+  filenameMapping: Map<string, string>,
+  filenames: string[],
+) {
+  const tscExec = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
+  const args = [
+    tscExec,
+    '--noEmit',
+    '--checkJs',
+    '--pretty',
+    path.join(tempDir, 'electron.d.ts'),
+    path.join(tempDir, 'ambient.d.ts'),
+    ...filenames,
+  ];
+  const { status, stderr, stdout } = await spawnAsync(process.execPath, args);
+
+  if (stderr) {
+    throw new Error(stderr);
+  }
+
+  // Replace the temp file paths with the original source filename
+  let correctedOutput = stdout.replace(
+    new RegExp(
+      `${path.relative(process.cwd(), tempDir)}${path.sep}`.replace(/\\/g, path.posix.sep),
+      'g',
+    ),
+    '',
+  );
+
+  // Strip any @ts-expect-error/@ts-ignore comments we added
+  correctedOutput = correctedOutput.replace(/ \/\/ @ts-(?:expect-error|ignore)/g, '');
+
+  if (correctedOutput.trim()) {
+    for (const [filename, originalFilename] of filenameMapping.entries()) {
+      correctedOutput = correctedOutput.replace(
+        new RegExp(path.basename(filename), 'g'),
+        originalFilename,
+      );
+    }
+
+    console.log(correctedOutput);
+  }
+
+  return status;
+}
+
+function parseDirectives(directive: string, value: string) {
+  return findCurlyBracedDirectives(directive, value)
+    .map((parsed) => parsed.match(/^([^:\r\n\t\f\v ]+):\s?(.+)$/))
+    .filter((parsed): parsed is RegExpMatchArray => parsed !== null);
+}
+
 // TODO(dsanders11): Refactor to make this script general purpose and
 // not tied to Electron - will require passing in the list of modules
 // as a CLI option, probably a file since there's a lot of info
@@ -59,7 +112,8 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
 
   try {
     const filenames: string[] = [];
-    const originalFilenames: Map<string, string> = new Map();
+    const originalFilenames = new Map<string, string>();
+    const windowTypeFilenames = new Set<string>();
 
     // Copy over the typings so that a relative path can be used
     fs.copyFileSync(path.join(process.cwd(), 'electron.d.ts'), path.join(tempDir, 'electron.d.ts'));
@@ -87,17 +141,19 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
           ?.match(/\B@ts-ignore=\[([\d,]*)\]\B/)?.[1]
           .split(',')
           .map((line) => parseInt(line));
-        const tsTypeLines = codeBlock.meta
-          ? findCurlyBracedDirectives('@ts-type', codeBlock.meta)
-              .map((directive) => directive.match(/^([^:\r\n\t\f\v ]+):\s?(.+)$/))
-              .filter((directive): directive is RegExpMatchArray => directive !== null)
+        const tsTypeLines = codeBlock.meta ? parseDirectives('@ts-type', codeBlock.meta) : [];
+        const tsWindowTypeLines = codeBlock.meta
+          ? parseDirectives('@ts-window-type', codeBlock.meta)
           : [];
 
-        if (tsNoCheck && (tsExpectErrorLines || tsIgnoreLines || tsTypeLines.length)) {
+        if (
+          tsNoCheck &&
+          (tsExpectErrorLines || tsIgnoreLines || tsTypeLines.length || tsWindowTypeLines.length)
+        ) {
           console.log(
             `${filepath}:${line}:${
               indent + 1
-            }: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type, they conflict`,
+            }: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict`,
           );
           errors = true;
           continue;
@@ -131,6 +187,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         const codeLines = codeBlock.value.split('\n');
         let insertedInitialLine = false;
         let types = '';
+        let windowTypes = '';
 
         const insertComment = (comment: string, line: number) => {
           // Inserting additional lines will make the tsc output
@@ -194,8 +251,8 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
             .replace(/\./g, '-')}-${line}.js`,
         );
 
-        // Blocks can have @ts-type={name:type} in their info string
-        // (1-based lines) to declare a global variable for a block
+        // Blocks can have @ts-type={name:type} in their info
+        // string to declare a global variable for a block
         if (tsTypeLines.length) {
           // To support this feature, generate a random name for a
           // module, generate an ambient module declaration for the
@@ -213,55 +270,40 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
             .join(',')}} = require('${moduleName}')`;
         }
 
-        fs.writeFileSync(filename, `// @ts-check\n${imports}\n${blankLines}${code}\n${types}`);
+        // Blocks can have @ts-window-type={name:type} in their
+        // info string to extend the Window object for a block
+        if (tsWindowTypeLines.length) {
+          const extraTypes = tsWindowTypeLines
+            .map((type) => `    ${type[1]}: ${type[2]};`)
+            .join('\n');
+          // Needs an export {} at the end to make TypeScript happy
+          windowTypes = `declare global {\n  interface Window {\n${extraTypes}\n  }\n}\n\nexport {};\n\n`;
+          fs.writeFileSync(filename.replace(/.js$/, '-window.d.ts'), windowTypes);
+          windowTypeFilenames.add(filename);
+        } else {
+          filenames.push(filename);
+        }
 
-        filenames.push(filename);
+        fs.writeFileSync(filename, `// @ts-check\n${imports}\n${blankLines}${code}\n${types}`);
         originalFilenames.set(filename, filepath);
       }
     }
 
     fs.writeFileSync(path.join(tempDir, 'ambient.d.ts'), ambientModules);
 
+    // Files for code blocks with window types have to be processed separately
+    // since window types are by nature global, and would bleed between blocks
+    for (const filename of windowTypeFilenames) {
+      const status = await typeCheckFiles(tempDir, originalFilenames, [
+        filename.replace(/.js$/, '-window.d.ts'),
+        filename,
+      ]);
+      errors = errors || status !== 0;
+    }
+
+    // For the rest of the files, run them all at once so it doesn't take forever
     for (const chunk of chunkFilenames(filenames)) {
-      const tscExec = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
-      const args = [
-        tscExec,
-        '--noEmit',
-        '--checkJs',
-        '--pretty',
-        path.join(tempDir, 'electron.d.ts'),
-        path.join(tempDir, 'ambient.d.ts'),
-        ...chunk,
-      ];
-      const { status, stderr, stdout } = await spawnAsync(process.execPath, args);
-
-      if (stderr) {
-        throw new Error(stderr);
-      }
-
-      // Replace the temp file paths with the original source filename
-      let correctedOutput = stdout.replace(
-        new RegExp(
-          `${path.relative(process.cwd(), tempDir)}${path.sep}`.replace(/\\/g, path.posix.sep),
-          'g',
-        ),
-        '',
-      );
-
-      // Strip any @ts-expect-error/@ts-ignore comments we added
-      correctedOutput = correctedOutput.replace(/ \/\/ @ts-(?:expect-error|ignore)/g, '');
-
-      if (correctedOutput.trim()) {
-        for (const [filename, originalFilename] of originalFilenames.entries()) {
-          correctedOutput = correctedOutput.replace(
-            new RegExp(path.basename(filename), 'g'),
-            originalFilename,
-          );
-        }
-
-        console.log(correctedOutput);
-      }
-
+      const status = await typeCheckFiles(tempDir, originalFilenames, chunk);
       errors = errors || status !== 0;
     }
 

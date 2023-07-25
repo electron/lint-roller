@@ -1,8 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`electron-lint-markdown-ts-check should type check code blocks 1`] = `
-"ts-check.md:49:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type, they conflict
-ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type, they conflict
+"ts-check.md:49:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict
+ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict
 [96mts-check.md[0m:[93m128[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'myAwesomeAPI' does not exist on type 'Window & typeof globalThis'.
 
 [7m128[0m window.myAwesomeAPI()
@@ -27,6 +27,11 @@ ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignor
 
 [7m157[0m   console.log(\`not true: \${a} < \${b}\`)
 [7m   [0m [91m                                  ~[0m
+
+[96mts-check.md[0m:[93m160[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'AwesomeAPI' does not exist on type 'Window & typeof globalThis'.
+
+[7m160[0m window.AwesomeAPI.bar('baz')
+[7m   [0m [91m       ~~~~~~~~~~[0m
 
 [96mts-check.md[0m:[93m4[0m:[93m9[0m - [91merror[0m[90m TS2339: [0mProperty 'foo' does not exist on type 'Console'.
 
@@ -54,11 +59,11 @@ ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignor
 [7m  [0m [91m       ~~~~~~~~~~~~[0m
 
 
-Found 10 errors in 7 files.
+Found 11 errors in 7 files.
 
 Errors  Files
      1  ts-check.md[90m:128[0m
-     4  ts-check.md[90m:154[0m
+     5  ts-check.md[90m:154[0m
      1  ts-check.md[90m:4[0m
      1  ts-check.md[90m:66[0m
      1  ts-check.md[90m:72[0m

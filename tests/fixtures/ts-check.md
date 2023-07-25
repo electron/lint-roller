@@ -156,4 +156,12 @@ if (a > b) {
 } else {
   console.log(`not true: ${a} < ${b}`)
 }
+
+window.AwesomeAPI.bar('baz')
+```
+
+This block defines additional types on window
+
+```js @ts-window-type={AwesomeAPI: { foo: (value: number) => void } }
+window.AwesomeAPI.foo(42)
 ```
