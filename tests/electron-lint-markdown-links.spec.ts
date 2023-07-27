@@ -12,13 +12,6 @@ function runLintMarkdownLinks(...args: string[]) {
 }
 
 describe('electron-lint-markdown-links', () => {
-  it('requires --root', () => {
-    const { status, stdout } = runLintMarkdownLinks('broken-internal-link.md');
-
-    expect(stdout.toString('utf-8')).toContain('Usage');
-    expect(status).toEqual(1);
-  });
-
   it('should catch broken internal links', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',

@@ -14,13 +14,6 @@ function runLintMarkdownStandard(...args: string[]) {
 }
 
 describe('electron-lint-markdown-standard', () => {
-  it('requires --root', () => {
-    const { status, stdout } = runLintMarkdownStandard('broken-internal-link.md');
-
-    expect(stdout).toContain('Usage');
-    expect(status).toEqual(1);
-  });
-
   it('should run clean when there are no errors', () => {
     const { status } = runLintMarkdownStandard('--root', FIXTURES_DIR, 'clean.md');
 

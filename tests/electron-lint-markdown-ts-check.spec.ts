@@ -12,13 +12,6 @@ function runLintMarkdownTsCheck(...args: string[]) {
 }
 
 describe('electron-lint-markdown-ts-check', () => {
-  it('requires --root', () => {
-    const { status, stdout } = runLintMarkdownTsCheck('ts-check.md');
-
-    expect(stdout).toContain('Usage');
-    expect(status).toEqual(1);
-  });
-
   it('should run clean when there are no errors', () => {
     const { status, stdout } = runLintMarkdownTsCheck('--root', FIXTURES_DIR, 'ts-check-clean.md');
 
