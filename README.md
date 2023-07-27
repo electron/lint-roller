@@ -36,12 +36,15 @@ check external links with the `--fetch-external-links` option.
 Markdown with `standard`, like `standard-markdown` does, but with better
 detection of code blocks.
 
-`electron-lint-markdown-ts-check` is a command to type check JS code blocks in
-Markdown with `tsc`. Type checking can be disabled for specific code blocks
+`electron-lint-markdown-ts-check` is a command to type check JS/TS code blocks
+in Markdown with `tsc`. Type checking can be disabled for specific code blocks
 by adding `@ts-nocheck` to the info string, specific lines can be ignored
 by adding `@ts-ignore=[<line1>,<line2>]` to the info string, and additional
 globals can be defined with `@ts-type={name:type}`. The `Window` object can
-be extended with more types using `@ts-window-type={name:type}`.
+be extended with more types using `@ts-window-type={name:type}`. When type
+checking TypeScript blocks in the same Markdown file, global augmentation
+(via `declare global`) can be shared between code blocks by putting
+`@ts-noisolate` on the code block doing the global augmentation.
 
 ## License
 

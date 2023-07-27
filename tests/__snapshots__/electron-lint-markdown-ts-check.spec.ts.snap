@@ -33,6 +33,21 @@ ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignor
 [7m160[0m window.AwesomeAPI.bar('baz')
 [7m   [0m [91m       ~~~~~~~~~~[0m
 
+[96mts-check.md[0m:[93m174[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
+
+[7m174[0m BrowserWindow.wrongAPI('foo')
+[7m   [0m [91m              ~~~~~~~~[0m
+
+[96mts-check.md[0m:[93m180[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
+
+[7m180[0m BrowserWindow.wrongAPI('foo')
+[7m   [0m [91m              ~~~~~~~~[0m
+
+[96mts-check.md[0m:[93m212[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'AwesomeAPI' does not exist on type 'Window & typeof globalThis'.
+
+[7m212[0m window.AwesomeAPI.foo(42)
+[7m   [0m [91m       ~~~~~~~~~~[0m
+
 [96mts-check.md[0m:[93m4[0m:[93m9[0m - [91merror[0m[90m TS2339: [0mProperty 'foo' does not exist on type 'Console'.
 
 [7m4[0m console.foo('whoops')
@@ -59,11 +74,14 @@ ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignor
 [7m  [0m [91m       ~~~~~~~~~~~~[0m
 
 
-Found 11 errors in 7 files.
+Found 14 errors in 10 files.
 
 Errors  Files
      1  ts-check.md[90m:128[0m
      5  ts-check.md[90m:154[0m
+     1  ts-check.md[90m:174[0m
+     1  ts-check.md[90m:180[0m
+     1  ts-check.md[90m:212[0m
      1  ts-check.md[90m:4[0m
      1  ts-check.md[90m:66[0m
      1  ts-check.md[90m:72[0m

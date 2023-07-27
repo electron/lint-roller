@@ -56,11 +56,13 @@ async function typeCheckFiles(
   filenames: string[],
 ) {
   const tscExec = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
+  const options = ['--noEmit', '--pretty', '--moduleDetection', 'force'];
+  if (filenames.find((filename) => filename.endsWith('.js'))) {
+    options.push('--checkJs');
+  }
   const args = [
     tscExec,
-    '--noEmit',
-    '--checkJs',
-    '--pretty',
+    ...options,
     path.join(tempDir, 'electron.d.ts'),
     path.join(tempDir, 'ambient.d.ts'),
     ...filenames,
@@ -113,7 +115,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
   try {
     const filenames: string[] = [];
     const originalFilenames = new Map<string, string>();
-    const windowTypeFilenames = new Set<string>();
+    const isolateFilenames = new Set<string>();
 
     // Copy over the typings so that a relative path can be used
     fs.copyFileSync(path.join(process.cwd(), 'electron.d.ts'), path.join(tempDir, 'electron.d.ts'));
@@ -124,15 +126,19 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
     for (const document of await workspace.getAllMarkdownDocuments()) {
       const uri = URI.parse(document.uri);
       const filepath = workspace.getWorkspaceRelativePath(uri);
-      const jsCodeBlocks = (await getCodeBlocks(document)).filter(
-        (code) => code.lang && ['javascript', 'js'].includes(code.lang.toLowerCase()),
+      const codeBlocks = (await getCodeBlocks(document)).filter(
+        (code) =>
+          code.lang && ['javascript', 'js', 'typescript', 'ts'].includes(code.lang.toLowerCase()),
       );
 
-      for (const codeBlock of jsCodeBlocks) {
+      for (const codeBlock of codeBlocks) {
+        const isTypeScript =
+          codeBlock.lang && ['typescript', 'ts'].includes(codeBlock.lang.toLowerCase());
         const line = codeBlock.position!.start.line;
         const indent = codeBlock.position!.start.column - 1;
 
         const tsNoCheck = codeBlock.meta?.split(' ').includes('@ts-nocheck');
+        const tsNoIsolate = codeBlock.meta?.split(' ').includes('@ts-noisolate');
         const tsExpectErrorLines = codeBlock.meta
           ?.match(/\B@ts-expect-error=\[([\d,]*)\]\B/)?.[1]
           .split(',')
@@ -233,10 +239,12 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
             .join('\n'),
         );
 
-        // If there are no require() lines, insert a default set of
+        // If there are no require() or import lines, insert a default set of
         // imports so that most snippets will have what they need.
         // This isn't foolproof and might cause name conflicts
-        const imports = codeBlock.value.includes(' require(') ? '' : DEFAULT_IMPORTS;
+        const imports = codeBlock.value.match(/^\s*(?:import .* from )|(?:.* = require())/m)
+          ? ''
+          : DEFAULT_IMPORTS;
 
         // Insert the necessary number of blank lines so that the line
         // numbers in output from tsc is accurate to the original file
@@ -248,7 +256,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
           tempDir,
           `${filepath
             .replace(new RegExp(path.sep.replace(/\\/g, '\\\\'), 'g'), '-')
-            .replace(/\./g, '-')}-${line}.js`,
+            .replace(/\./g, '-')}-${line}.${isTypeScript ? 'ts' : 'js'}`,
         );
 
         // Blocks can have @ts-type={name:type} in their info
@@ -272,14 +280,16 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
 
         // Blocks can have @ts-window-type={name:type} in their
         // info string to extend the Window object for a block
-        if (tsWindowTypeLines.length) {
+        if (!tsNoIsolate && tsWindowTypeLines.length) {
           const extraTypes = tsWindowTypeLines
             .map((type) => `    ${type[1]}: ${type[2]};`)
             .join('\n');
           // Needs an export {} at the end to make TypeScript happy
           windowTypes = `declare global {\n  interface Window {\n${extraTypes}\n  }\n}\n\nexport {};\n\n`;
-          fs.writeFileSync(filename.replace(/.js$/, '-window.d.ts'), windowTypes);
-          windowTypeFilenames.add(filename);
+          fs.writeFileSync(filename.replace(/.[jt]s$/, '-window.d.ts'), windowTypes);
+          isolateFilenames.add(filename);
+        } else if (!tsNoIsolate && code.match(/^\s*declare global /m)) {
+          isolateFilenames.add(filename);
         } else {
           filenames.push(filename);
         }
@@ -291,13 +301,18 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
 
     fs.writeFileSync(path.join(tempDir, 'ambient.d.ts'), ambientModules);
 
-    // Files for code blocks with window types have to be processed separately
-    // since window types are by nature global, and would bleed between blocks
-    for (const filename of windowTypeFilenames) {
-      const status = await typeCheckFiles(tempDir, originalFilenames, [
-        filename.replace(/.js$/, '-window.d.ts'),
-        filename,
-      ]);
+    // Files for code blocks with window type directives or 'declare global' need
+    // to be processed separately since window types are by nature global, and
+    // they would bleed between blocks otherwise, which can cause problems
+    for (const filename of isolateFilenames) {
+      const filenames = [filename];
+      const windowTypesFilename = filename.replace(/.[jt]s$/, '-window.d.ts');
+      try {
+        fs.statSync(windowTypesFilename);
+        filenames.unshift(windowTypesFilename);
+      } catch {}
+
+      const status = await typeCheckFiles(tempDir, originalFilenames, filenames);
       errors = errors || status !== 0;
     }
 
