@@ -11,6 +11,12 @@
     "electron-lint-markdown-standard": "./dist/bin/lint-markdown-standard.js",
     "electron-lint-markdown-ts-check": "./dist/bin/lint-markdown-ts-check.js"
   },
+  "files": [
+    "configs",
+    "dist",
+    "lib",
+    "markdownlint-rules"
+  ],
   "directories": {
     "lib": "lib"
   },
