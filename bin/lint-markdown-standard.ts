@@ -81,6 +81,11 @@ async function main(
         console.log(`         ${lineInfo}Code block language identifier should be all lowercase`);
       }
 
+      // Skip blocks with @nolint in their info string
+      if (codeBlock.meta?.split(' ').includes('@nolint')) {
+        continue;
+      }
+
       // Skip empty code blocks
       if (!codeBlock.value.trim()) {
         continue;

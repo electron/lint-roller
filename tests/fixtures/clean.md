@@ -76,3 +76,7 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
    ```js
    console.log('all good here!')
    ```
+
+```javascript @nolint
+var foo = 3
+```

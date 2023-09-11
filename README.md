@@ -34,7 +34,8 @@ check external links with the `--fetch-external-links` option.
 
 `electron-lint-markdown-standard` is a command to lint JS code blocks in
 Markdown with `standard`, like `standard-markdown` does, but with better
-detection of code blocks.
+detection of code blocks. Linting can be disabled for specific code blocks
+by adding `@nolint` to the info string.
 
 `electron-lint-markdown-ts-check` is a command to type check JS/TS code blocks
 in Markdown with `tsc`. Type checking can be disabled for specific code blocks
