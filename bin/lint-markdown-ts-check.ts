@@ -126,7 +126,7 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
     for (const document of await workspace.getAllMarkdownDocuments()) {
       const uri = URI.parse(document.uri);
       const filepath = workspace.getWorkspaceRelativePath(uri);
-      const codeBlocks = (await getCodeBlocks(document)).filter(
+      const codeBlocks = (await getCodeBlocks(document.getText())).filter(
         (code) =>
           code.lang && ['javascript', 'js', 'typescript', 'ts'].includes(code.lang.toLowerCase()),
       );

@@ -335,7 +335,7 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
   }
 }
 
-export async function getCodeBlocks(document: ITextDocument): Promise<Code[]> {
+export async function getCodeBlocks(content: string): Promise<Code[]> {
   const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
     fromMarkdown: typeof FromMarkdownFunction;
   };
@@ -343,7 +343,7 @@ export async function getCodeBlocks(document: ITextDocument): Promise<Code[]> {
     visit: typeof VisitFunction;
   };
 
-  const tree = fromMarkdown(document.getText());
+  const tree = fromMarkdown(content);
 
   const codeBlocks: Code[] = [];
 
