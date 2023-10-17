@@ -62,7 +62,7 @@ async function main(
     const filepath = workspace.getWorkspaceRelativePath(uri);
     const changes: TextEdit[] = [];
 
-    const jsCodeBlocks = (await getCodeBlocks(document)).filter(
+    const jsCodeBlocks = (await getCodeBlocks(document.getText())).filter(
       (code) => code.lang && ['javascript', 'js'].includes(code.lang.toLowerCase()),
     );
 
