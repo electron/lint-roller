@@ -17,4 +17,17 @@ describe('electron-markdownlint', () => {
     expect(stderr.toString('utf-8')).toContain('EMD001/no-shortcut-reference-links');
     expect(status).toEqual(1);
   });
+
+  it('should allow GitHub alert syntax', () => {
+    const { status } = cp.spawnSync(
+      process.execPath,
+      [
+        path.resolve(__dirname, '../dist/bin/markdownlint-cli-wrapper.js'),
+        path.resolve(FIXTURES_DIR, 'github-alerts.md'),
+      ],
+      { stdio: 'pipe' },
+    );
+
+    expect(status).toEqual(0);
+  });
 });
