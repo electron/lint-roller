@@ -43,7 +43,6 @@
   },
   "homepage": "https://github.com/electron/lint-roller#readme",
   "devDependencies": {
-    "@continuous-auth/semantic-release-npm": "^3.0.0",
     "@electron-internal/eslint-config": "^1.0.1",
     "@types/balanced-match": "^1.0.3",
     "@types/glob": "^8.0.1",
