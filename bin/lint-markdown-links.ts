@@ -11,7 +11,6 @@ import {
   LogLevel,
 } from '@dsanders11/vscode-markdown-languageservice';
 import * as minimist from 'minimist';
-import fetch from 'node-fetch';
 import { CancellationTokenSource } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 
@@ -34,6 +33,12 @@ const diagnosticOptions: DiagnosticOptions = {
 };
 
 async function fetchExternalLink(link: string, checkRedirects = false) {
+  // Use global fetch if available, otherwise fall back to node-fetch
+  if (!('fetch' in global)) {
+    const { default: fetch } = await import('node-fetch');
+    (global as any).fetch = fetch;
+  }
+
   try {
     const response = await fetch(link);
     if (response.status !== 200) {
