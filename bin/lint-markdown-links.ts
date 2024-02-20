@@ -40,7 +40,12 @@ async function fetchExternalLink(link: string, checkRedirects = false) {
   }
 
   try {
-    const response = await fetch(link);
+    const response = await fetch(link, {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)  Chrome/122.0.6261.39 Electron/29.0.0 Safari/537.36',
+      },
+    });
     if (response.status !== 200) {
       console.log('Broken link', link, response.status, response.statusText);
     } else {
