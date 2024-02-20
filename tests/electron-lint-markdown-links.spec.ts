@@ -140,4 +140,15 @@ describe('electron-lint-markdown-links', () => {
       expect(status).toEqual(0);
     });
   }
+
+  it('should be able to fetch twitter links', () => {
+    const { status } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      'twitter-link.md',
+      '--fetch-external-links',
+    );
+
+    expect(status).toEqual(0);
+  });
 });
