@@ -23,5 +23,6 @@
     "br_spaces": 0
   },
   "single-h1": false,
-  "no-inline-html": false
+  "no-inline-html": false,
+  "no-angle-brackets": false
 }

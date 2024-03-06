@@ -11,10 +11,10 @@ describe('electron-markdownlint', () => {
         path.resolve(__dirname, '../dist/bin/markdownlint-cli-wrapper.js'),
         path.resolve(FIXTURES_DIR, 'shortcut-links.md'),
       ],
-      { stdio: 'pipe' },
+      { stdio: 'pipe', encoding: 'utf-8' },
     );
 
-    expect(stderr.toString('utf-8')).toContain('EMD001/no-shortcut-reference-links');
+    expect(stderr).toContain('EMD001/no-shortcut-reference-links');
     expect(status).toEqual(1);
   });
 
@@ -28,6 +28,42 @@ describe('electron-markdownlint', () => {
       { stdio: 'pipe' },
     );
 
+    expect(status).toEqual(0);
+  });
+
+  it('should not allow opening angle brackets if EMD002 enabled', () => {
+    const { status, stderr, stdout } = cp.spawnSync(
+      process.execPath,
+      [
+        path.resolve(__dirname, '../dist/bin/markdownlint-cli-wrapper.js'),
+        '--enable',
+        'EMD002',
+        '--',
+        path.resolve(FIXTURES_DIR, 'angle-brackets.md'),
+      ],
+      { stdio: 'pipe', encoding: 'utf-8' },
+    );
+
+    expect(stderr.replace(`${FIXTURES_DIR}${path.sep}`, '<root>')).toMatchSnapshot();
+    expect(stdout).toBe('');
+    expect(status).toEqual(1);
+  });
+
+  it('should allow escaped opening angle brackets if EMD002 enabled', () => {
+    const { status, stderr, stdout } = cp.spawnSync(
+      process.execPath,
+      [
+        path.resolve(__dirname, '../dist/bin/markdownlint-cli-wrapper.js'),
+        '--enable',
+        'EMD002',
+        '--',
+        path.resolve(FIXTURES_DIR, 'escaped-angle-brackets.md'),
+      ],
+      { stdio: 'pipe', encoding: 'utf-8' },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('');
     expect(status).toEqual(0);
   });
 });
