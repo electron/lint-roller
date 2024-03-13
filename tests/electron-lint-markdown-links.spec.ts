@@ -30,7 +30,7 @@ describe('electron-lint-markdown-links', () => {
       '--root',
       FIXTURES_DIR,
       '--ignore',
-      '**/{broken,valid}-*-link.md',
+      '**/{{broken,valid}-*-link.md,*angle-brackets.md}',
       '*.md',
     );
 
@@ -45,6 +45,8 @@ describe('electron-lint-markdown-links', () => {
       '**/broken-{external,internal}-link.md',
       '--ignore',
       '**/{broken,valid}-cross-file-link.md',
+      '--ignore',
+      '**/*angle-brackets.md',
       '*.md',
     );
 
