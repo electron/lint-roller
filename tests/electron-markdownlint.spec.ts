@@ -1,4 +1,5 @@
 import * as cp from 'node:child_process';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
@@ -44,7 +45,13 @@ describe('electron-markdownlint', () => {
       { stdio: 'pipe', encoding: 'utf-8' },
     );
 
-    expect(stderr.replace(`${FIXTURES_DIR}${path.sep}`, '<root>')).toMatchSnapshot();
+    let fixturesRoot = `${FIXTURES_DIR}${path.sep}`;
+
+    if (os.platform() === 'win32') {
+      fixturesRoot = fixturesRoot.replace(/\\/g, '\\\\');
+    }
+
+    expect(stderr.replace(new RegExp(fixturesRoot, 'g'), '<root>')).toMatchSnapshot();
     expect(stdout).toBe('');
     expect(status).toEqual(1);
   });
