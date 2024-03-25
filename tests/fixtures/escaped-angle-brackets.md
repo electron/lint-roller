@@ -18,3 +18,5 @@ And Function&#60;[foo](bar)>
       * `smart-card`
       * `video`
       * `wireless`
+
+* `params` Record\<string, string\> - The other `<webview>` parameters such as the `src` URL.

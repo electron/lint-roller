@@ -1,3 +1,16 @@
+Remove progress bar when progress < 0;
+
+In Electron <=6, this would return a `FileList` with a `File` object for:
+
+#### Event: 'audio-state-changed'
+
+Returns:
+
+* `event` Event<>
+  * `audible` boolean - True if one or more frames or child `webContents` are emitting audio.
+
+Emitted when media becomes audible or inaudible.
+
 # protocol
 
 > Register a custom protocol and intercept existing protocol requests.
