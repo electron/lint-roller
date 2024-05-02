@@ -2,6 +2,8 @@ import * as cp from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { describe, expect, it } from 'vitest';
+
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
 
 describe('electron-markdownlint', () => {
