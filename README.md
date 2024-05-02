@@ -37,7 +37,7 @@ Markdown with `standard`, like `standard-markdown` does, but with better
 detection of code blocks. Linting can be disabled for specific code blocks
 by adding `@nolint` to the info string.
 
-`electron-lint-markdown-ts-check` is a command to type check JS/TS code blocks
+`lint-roller-markdown-ts-check` is a command to type check JS/TS code blocks
 in Markdown with `tsc`. Type checking can be disabled for specific code blocks
 by adding `@ts-nocheck` to the info string, specific lines can be ignored
 by adding `@ts-ignore=[<line1>,<line2>]` to the info string, and additional

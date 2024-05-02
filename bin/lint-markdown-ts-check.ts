@@ -12,61 +12,30 @@ import { URI } from 'vscode-uri';
 import {
   chunkFilenames,
   findCurlyBracedDirectives,
+  loadConfig,
   spawnAsync,
   wrapOrphanObjectInParens,
+  LintRollerConfig,
 } from '../lib/helpers';
 import { getCodeBlocks, DocsWorkspace } from '../lib/markdown';
 
 interface Options {
+  config?: LintRollerConfig;
   ignoreGlobs?: string[];
 }
-
-const ELECTRON_MODULES = [
-  'app',
-  'autoUpdater',
-  'contextBridge',
-  'crashReporter',
-  'dialog',
-  'BrowserWindow',
-  'ipcMain',
-  'ipcRenderer',
-  'Menu',
-  'MessageChannelMain',
-  'nativeImage',
-  'net',
-  'protocol',
-  'session',
-  'systemPreferences',
-  'Tray',
-  'utilityProcess',
-  'webFrame',
-  'webFrameMain',
-];
-
-const NODE_IMPORTS =
-  "const childProcess = require('node:child_process'); const fs = require('node:fs'); const path = require('node:path')";
-
-const DEFAULT_IMPORTS = `${NODE_IMPORTS}; const { ${ELECTRON_MODULES.join(
-  ', ',
-)} } = require('electron');`;
 
 async function typeCheckFiles(
   tempDir: string,
   filenameMapping: Map<string, string>,
   filenames: string[],
+  typings: string[],
 ) {
   const tscExec = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
   const options = ['--noEmit', '--pretty', '--moduleDetection', 'force'];
   if (filenames.find((filename) => filename.endsWith('.js'))) {
     options.push('--checkJs');
   }
-  const args = [
-    tscExec,
-    ...options,
-    path.join(tempDir, 'electron.d.ts'),
-    path.join(tempDir, 'ambient.d.ts'),
-    ...filenames,
-  ];
+  const args = [tscExec, ...options, ...typings, ...filenames];
   const { status, stderr, stdout } = await spawnAsync(process.execPath, args);
 
   if (stderr) {
@@ -105,20 +74,18 @@ function parseDirectives(directive: string, value: string) {
     .filter((parsed): parsed is RegExpMatchArray => parsed !== null);
 }
 
-// TODO(dsanders11): Refactor to make this script general purpose and
-// not tied to Electron - will require passing in the list of modules
-// as a CLI option, probably a file since there's a lot of info
-async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }: Options) {
+async function main(
+  workspaceRoot: string,
+  globs: string[],
+  { config = undefined, ignoreGlobs = [] }: Options,
+) {
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'electron-ts-check-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lint-roller-ts-check-'));
 
   try {
     const filenames: string[] = [];
     const originalFilenames = new Map<string, string>();
     const isolateFilenames = new Set<string>();
-
-    // Copy over the typings so that a relative path can be used
-    fs.copyFileSync(path.join(process.cwd(), 'electron.d.ts'), path.join(tempDir, 'electron.d.ts'));
 
     let ambientModules = '';
     let errors = false;
@@ -244,11 +211,11 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         // This isn't foolproof and might cause name conflicts
         const imports = codeBlock.value.match(/^\s*(?:import .* from )|(?:.* = require())/m)
           ? ''
-          : DEFAULT_IMPORTS;
+          : (config?.['markdown-ts-check']?.defaultImports?.join(';') ?? '') + ';';
 
         // Insert the necessary number of blank lines so that the line
         // numbers in output from tsc is accurate to the original file
-        const blankLines = '\n'.repeat(insertedInitialLine ? line - 3 : line - 2);
+        const blankLines = '\n'.repeat(Math.max(0, insertedInitialLine ? line - 3 : line - 2));
 
         // Filename is unique since it is the name of the original Markdown
         // file, with the starting line number of the codeblock appended
@@ -299,7 +266,17 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
       }
     }
 
-    fs.writeFileSync(path.join(tempDir, 'ambient.d.ts'), ambientModules);
+    const ambientTypings = path.join(tempDir, 'ambient.d.ts');
+    fs.writeFileSync(ambientTypings, ambientModules);
+
+    const typings = [ambientTypings];
+
+    // Copy over the typings so that a relative path can be used
+    for (const typing of config?.['markdown-ts-check']?.typings ?? []) {
+      const tempPath = path.join(tempDir, path.basename(typing));
+      fs.copyFileSync(path.join(path.resolve(workspaceRoot), typing), tempPath);
+      typings.push(tempPath);
+    }
 
     // Files for code blocks with window type directives or 'declare global' need
     // to be processed separately since window types are by nature global, and
@@ -312,13 +289,13 @@ async function main(workspaceRoot: string, globs: string[], { ignoreGlobs = [] }
         filenames.unshift(windowTypesFilename);
       } catch {}
 
-      const status = await typeCheckFiles(tempDir, originalFilenames, filenames);
+      const status = await typeCheckFiles(tempDir, originalFilenames, filenames, typings);
       errors = errors || status !== 0;
     }
 
     // For the rest of the files, run them all at once so it doesn't take forever
     for (const chunk of chunkFilenames(filenames)) {
-      const status = await typeCheckFiles(tempDir, originalFilenames, chunk);
+      const status = await typeCheckFiles(tempDir, originalFilenames, chunk, typings);
       errors = errors || status !== 0;
     }
 
@@ -332,8 +309,8 @@ function parseCommandLine() {
   const showUsage = (arg?: string): boolean => {
     if (!arg || arg.startsWith('-')) {
       console.log(
-        'Usage: electron-lint-markdown-ts-check [--root <dir>] <globs> [-h|--help]' +
-          '[--ignore <globs>] [--ignore-path <path>]',
+        'Usage: lint-roller-markdown-ts-check [--root <dir>] <globs> [-h|--help]' +
+          '[--ignore <globs>] [--ignore-path <path>] [--config <path>]',
       );
       process.exit(1);
     }
@@ -343,7 +320,7 @@ function parseCommandLine() {
 
   const opts = minimist(process.argv.slice(2), {
     boolean: ['help'],
-    string: ['root', 'ignore', 'ignore-path'],
+    string: ['config', 'root', 'ignore', 'ignore-path'],
     unknown: showUsage,
   });
 
@@ -373,7 +350,12 @@ if (require.main === module) {
     }
   }
 
+  const config = loadConfig(
+    opts.config ? path.resolve(opts.config) : path.resolve('.lint-roller.json'),
+  );
+
   main(path.resolve(process.cwd(), opts.root), opts._, {
+    config,
     ignoreGlobs: opts.ignore,
   })
     .then((errors) => {
