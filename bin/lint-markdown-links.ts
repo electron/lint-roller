@@ -147,7 +147,7 @@ function parseCommandLine() {
   const showUsage = (arg?: string): boolean => {
     if (!arg || arg.startsWith('-')) {
       console.log(
-        'Usage: electron-lint-markdown-links [--root <dir>] <globs> [-h|--help] [--fetch-external-links] ' +
+        'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--fetch-external-links] ' +
           '[--check-redirects] [--ignore <globs>]',
       );
       process.exit(1);

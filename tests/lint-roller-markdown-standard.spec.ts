@@ -13,7 +13,7 @@ function runLintMarkdownStandard(...args: string[]) {
   );
 }
 
-describe('electron-lint-markdown-standard', () => {
+describe('lint-roller-markdown-standard', () => {
   it('should run clean when there are no errors', () => {
     const { status } = runLintMarkdownStandard('--root', FIXTURES_DIR, 'clean.md');
 

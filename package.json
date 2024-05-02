@@ -7,8 +7,8 @@
   },
   "bin": {
     "electron-markdownlint": "./dist/bin/markdownlint-cli-wrapper.js",
-    "electron-lint-markdown-links": "./dist/bin/lint-markdown-links.js",
-    "electron-lint-markdown-standard": "./dist/bin/lint-markdown-standard.js",
+    "lint-roller-markdown-links": "./dist/bin/lint-markdown-links.js",
+    "lint-roller-markdown-standard": "./dist/bin/lint-markdown-standard.js",
     "lint-roller-markdown-ts-check": "./dist/bin/lint-markdown-ts-check.js"
   },
   "files": [
