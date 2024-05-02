@@ -1,51 +1,46 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`lint-roller-markdown-ts-check should type check code blocks 1`] = `
-"ts-check.md:49:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict
-ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict
-[96mts-check.md[0m:[93m128[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'myAwesomeAPI' does not exist on type 'Window & typeof globalThis'.
+"ts-check.md:37:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-type/@ts-window-type, they conflict
+ts-check.md:43:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-type/@ts-window-type, they conflict
+[96mts-check.md[0m:[93m109[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'a'.
 
-[7m128[0m window.myAwesomeAPI()
-[7m   [0m [91m       ~~~~~~~~~~~~[0m
-
-[96mts-check.md[0m:[93m154[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'a'.
-
-[7m154[0m if (a > b) {
+[7m109[0m if (a > b) {
 [7m   [0m [91m    ~[0m
 
-[96mts-check.md[0m:[93m154[0m:[93m9[0m - [91merror[0m[90m TS2304: [0mCannot find name 'b'.
+[96mts-check.md[0m:[93m109[0m:[93m9[0m - [91merror[0m[90m TS2304: [0mCannot find name 'b'.
 
-[7m154[0m if (a > b) {
+[7m109[0m if (a > b) {
 [7m   [0m [91m        ~[0m
 
-[96mts-check.md[0m:[93m157[0m:[93m28[0m - [91merror[0m[90m TS2304: [0mCannot find name 'a'.
+[96mts-check.md[0m:[93m112[0m:[93m28[0m - [91merror[0m[90m TS2304: [0mCannot find name 'a'.
 
-[7m157[0m   console.log(\`not true: \${a} < \${b}\`)
+[7m112[0m   console.log(\`not true: \${a} < \${b}\`)
 [7m   [0m [91m                           ~[0m
 
-[96mts-check.md[0m:[93m157[0m:[93m35[0m - [91merror[0m[90m TS2304: [0mCannot find name 'b'.
+[96mts-check.md[0m:[93m112[0m:[93m35[0m - [91merror[0m[90m TS2304: [0mCannot find name 'b'.
 
-[7m157[0m   console.log(\`not true: \${a} < \${b}\`)
+[7m112[0m   console.log(\`not true: \${a} < \${b}\`)
 [7m   [0m [91m                                  ~[0m
 
-[96mts-check.md[0m:[93m160[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'AwesomeAPI' does not exist on type 'Window & typeof globalThis'.
+[96mts-check.md[0m:[93m115[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'AwesomeAPI' does not exist on type 'Window & typeof globalThis'.
 
-[7m160[0m window.AwesomeAPI.bar('baz')
+[7m115[0m window.AwesomeAPI.bar('baz')
 [7m   [0m [91m       ~~~~~~~~~~[0m
 
-[96mts-check.md[0m:[93m174[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
+[96mts-check.md[0m:[93m129[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
 
-[7m174[0m BrowserWindow.wrongAPI('foo')
+[7m129[0m BrowserWindow.wrongAPI('foo')
 [7m   [0m [91m              ~~~~~~~~[0m
 
-[96mts-check.md[0m:[93m180[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
+[96mts-check.md[0m:[93m135[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
 
-[7m180[0m BrowserWindow.wrongAPI('foo')
+[7m135[0m BrowserWindow.wrongAPI('foo')
 [7m   [0m [91m              ~~~~~~~~[0m
 
-[96mts-check.md[0m:[93m212[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'AwesomeAPI' does not exist on type 'Window & typeof globalThis'.
+[96mts-check.md[0m:[93m167[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'AwesomeAPI' does not exist on type 'Window & typeof globalThis'.
 
-[7m212[0m window.AwesomeAPI.foo(42)
+[7m167[0m window.AwesomeAPI.foo(42)
 [7m   [0m [91m       ~~~~~~~~~~[0m
 
 [96mts-check.md[0m:[93m4[0m:[93m9[0m - [91merror[0m[90m TS2339: [0mProperty 'foo' does not exist on type 'Console'.
@@ -53,14 +48,14 @@ ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignor
 [7m4[0m console.foo('whoops')
 [7m [0m [91m        ~~~[0m
 
-[96mts-check.md[0m:[93m66[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
+[96mts-check.md[0m:[93m54[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
 
-[7m66[0m BrowserWindow.wrongAPI('foo')
+[7m54[0m BrowserWindow.wrongAPI('foo')
 [7m  [0m [91m              ~~~~~~~~[0m
 
-[96mts-check.md[0m:[93m72[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
+[96mts-check.md[0m:[93m60[0m:[93m15[0m - [91merror[0m[90m TS2339: [0mProperty 'wrongAPI' does not exist on type 'typeof BrowserWindow'.
 
-[7m72[0m BrowserWindow.wrongAPI('foo')
+[7m60[0m BrowserWindow.wrongAPI('foo')
 [7m  [0m [91m              ~~~~~~~~[0m
 
 [96mts-check.md[0m:[93m8[0m:[93m9[0m - [91merror[0m[90m TS2339: [0mProperty 'foo' does not exist on type 'Console'.
@@ -68,25 +63,24 @@ ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignor
 [7m8[0m console.foo('whoops')
 [7m [0m [91m        ~~~[0m
 
-[96mts-check.md[0m:[93m95[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'myAwesomeAPI' does not exist on type 'Window & typeof globalThis'.
+[96mts-check.md[0m:[93m83[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'myAwesomeAPI' does not exist on type 'Window & typeof globalThis'.
 
-[7m95[0m window.myAwesomeAPI()
+[7m83[0m window.myAwesomeAPI()
 [7m  [0m [91m       ~~~~~~~~~~~~[0m
 
 
-Found 14 errors in 10 files.
+Found 13 errors in 9 files.
 
 Errors  Files
-     1  ts-check.md[90m:128[0m
-     5  ts-check.md[90m:154[0m
-     1  ts-check.md[90m:174[0m
-     1  ts-check.md[90m:180[0m
-     1  ts-check.md[90m:212[0m
+     5  ts-check.md[90m:109[0m
+     1  ts-check.md[90m:129[0m
+     1  ts-check.md[90m:135[0m
+     1  ts-check.md[90m:167[0m
      1  ts-check.md[90m:4[0m
-     1  ts-check.md[90m:66[0m
-     1  ts-check.md[90m:72[0m
+     1  ts-check.md[90m:54[0m
+     1  ts-check.md[90m:60[0m
      1  ts-check.md[90m:8[0m
-     1  ts-check.md[90m:95[0m
+     1  ts-check.md[90m:83[0m
 
 "
 `;

@@ -51,8 +51,8 @@ async function typeCheckFiles(
     '',
   );
 
-  // Strip any @ts-expect-error/@ts-ignore comments we added
-  correctedOutput = correctedOutput.replace(/ \/\/ @ts-(?:expect-error|ignore)/g, '');
+  // Strip any @ts-expect-error comments we added
+  correctedOutput = correctedOutput.replace(/ \/\/ @ts-expect-error/g, '');
 
   if (correctedOutput.trim()) {
     for (const [filename, originalFilename] of filenameMapping.entries()) {
@@ -110,38 +110,16 @@ async function main(
           ?.match(/\B@ts-expect-error=\[([\d,]*)\]\B/)?.[1]
           .split(',')
           .map((line) => parseInt(line));
-        const tsIgnoreLines = codeBlock.meta
-          ?.match(/\B@ts-ignore=\[([\d,]*)\]\B/)?.[1]
-          .split(',')
-          .map((line) => parseInt(line));
         const tsTypeLines = codeBlock.meta ? parseDirectives('@ts-type', codeBlock.meta) : [];
         const tsWindowTypeLines = codeBlock.meta
           ? parseDirectives('@ts-window-type', codeBlock.meta)
           : [];
 
-        if (
-          tsNoCheck &&
-          (tsExpectErrorLines || tsIgnoreLines || tsTypeLines.length || tsWindowTypeLines.length)
-        ) {
+        if (tsNoCheck && (tsExpectErrorLines || tsTypeLines.length || tsWindowTypeLines.length)) {
           console.log(
             `${filepath}:${line}:${
               indent + 1
-            }: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict`,
-          );
-          errors = true;
-          continue;
-        }
-
-        // There should be no overlap between @ts-expect-error and @ts-ignore
-        if (
-          tsExpectErrorLines &&
-          tsIgnoreLines &&
-          tsExpectErrorLines.some((line) => tsIgnoreLines.includes(line))
-        ) {
-          console.log(
-            `${filepath}:${line}:${
-              indent + 1
-            }: Code block has both @ts-expect-error and @ts-ignore with same line number(s)`,
+            }: Code block has both @ts-nocheck and @ts-expect-error/@ts-type/@ts-window-type, they conflict`,
           );
           errors = true;
           continue;
@@ -165,11 +143,11 @@ async function main(
         const insertComment = (comment: string, line: number) => {
           // Inserting additional lines will make the tsc output
           // incorrect which would be a pain to manually adjust,
-          // and there is no @ts-ignore-line, so tack the comment
-          // on to the end of the previous line - looks ugly but
-          // we never have to see it since it's in a temp file.
-          // The first line of the file is an edge case where an
-          // insertion is necessary, so take that into account
+          // and there is no @ts-expect-error-line, so tack the
+          // comment on to the end of the previous line - looks
+          // ugly but we never have to see it since it's in a temp
+          // file. The first line of the file is an edge case where
+          // an insertion is necessary, so take that into account
           if (line === 1) {
             codeLines.unshift(comment);
             insertedInitialLine = true;
@@ -186,15 +164,10 @@ async function main(
           }
         };
 
-        // Blocks can have @ts-ignore=[1,10,50] in their info string
-        // (1-based lines) to insert an "// @ts-ignore" comment before
+        // Blocks can have @ts-expect-error=[1,10,50] in their info string
+        // (1-based lines) to insert an "// @ts-expect-error" comment before
         // specified lines, in order to ignore specific lines (like
         // requires of extra modules) without skipping the whole block
-        for (const line of tsIgnoreLines ?? []) {
-          insertComment('// @ts-ignore', line);
-        }
-
-        // Blocks can also have @ts-expect-error
         for (const line of tsExpectErrorLines ?? []) {
           insertComment('// @ts-expect-error', line);
         }
