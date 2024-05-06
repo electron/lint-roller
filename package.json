@@ -3,7 +3,7 @@
   "version": "0.0.0-development",
   "description": "Markdown linting helpers for Electron org repos",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "bin": {
     "electron-markdownlint": "./dist/bin/markdownlint-cli-wrapper.js",
@@ -22,8 +22,8 @@
   },
   "scripts": {
     "build": "tsc && yarn run build:emd002 && yarn run build:emd003",
-    "build:emd002": "esbuild --platform=node --target=node14 --format=cjs --bundle --outfile=markdownlint-rules/emd002.js markdownlint-rules/emd002.mjs",
-    "build:emd003": "esbuild --platform=node --target=node14 --format=cjs --bundle --outfile=markdownlint-rules/emd003.js markdownlint-rules/emd003.mjs",
+    "build:emd002": "esbuild --platform=node --target=node18 --format=cjs --bundle --outfile=markdownlint-rules/emd002.js markdownlint-rules/emd002.mjs",
+    "build:emd003": "esbuild --platform=node --target=node18 --format=cjs --bundle --outfile=markdownlint-rules/emd003.js markdownlint-rules/emd003.mjs",
     "prepublishOnly": "yarn run build",
     "lint:eslint": "eslint \"{bin,lib,markdownlint-rules,tests}/**/*.{js,ts}\"",
     "lint:eslint:fix": "eslint --fix \"{bin,lib,markdownlint-rules,tests}/**/*.{js,ts}\"",
@@ -67,7 +67,7 @@
     "balanced-match": "^2.0.0",
     "glob": "^8.1.0",
     "markdown-it": "^13.0.1",
-    "markdownlint-cli": "^0.33.0",
+    "markdownlint-cli": "^0.40.0",
     "mdast-util-from-markdown": "^1.3.0",
     "minimist": "^1.2.8",
     "node-fetch": "^2.6.9",
@@ -85,5 +85,8 @@
     "typescript": {
       "optional": true
     }
+  },
+  "resolutions": {
+    "jackspeak": "2.1.1"
   }
 }

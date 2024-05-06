@@ -15,7 +15,7 @@ describe('electron-markdownlint', () => {
       { stdio: 'pipe', encoding: 'utf-8' },
     );
 
-    expect(stderr).toContain('EMD001/no-shortcut-reference-links');
+    expect(stderr).toContain('MD054/link-image-style');
     expect(status).toEqual(1);
   });
 
