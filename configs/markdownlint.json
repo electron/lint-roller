@@ -24,5 +24,6 @@
   },
   "single-h1": false,
   "no-inline-html": false,
-  "no-angle-brackets": false
+  "no-angle-brackets": false,
+  "no-curly-braces": false
 }

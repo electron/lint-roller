@@ -6,3 +6,8 @@ exports[`electron-markdownlint should not allow opening angle brackets if EMD002
 <root>angle-brackets.md:127 EMD002/no-angle-brackets No unescaped opening angle brackets in text (does not play nice with MDX) [Unescaped opening angle bracket]
 "
 `;
+
+exports[`electron-markdownlint should not allow opening curly braces if EMD003 enabled 1`] = `
+"<root>curly-braces.md:1 EMD003/no-curly-braces No unescaped opening curly braces in text (does not play nice with MDX) [Unescaped opening curly brace]
+"
+`;
