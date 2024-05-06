@@ -9,7 +9,7 @@ export const tags = ['brackets'];
 
 const UNESCAPED_REGEX = /(?<!\\)<(?!\s)/g;
 
-function EMD001(params, onError) {
+function EMD002(params, onError) {
   filterTokens(params, 'inline', (token) => {
     for (const childToken of token.children) {
       // childToken.line has the raw content, but may also contain
@@ -44,4 +44,4 @@ function EMD001(params, onError) {
   });
 };
 
-export { EMD001 as function };
+export { EMD002 as function };
