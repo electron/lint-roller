@@ -20,13 +20,9 @@ workflows:
                 - node/macos
                 - node/windows
               node-version:
+                - '22.1'
                 - '20.10'
                 - '18.18'
-                - '16.20'
-                - '14.21'
-            exclude:
-              - executor: node/macos
-                node-version: '14.21'
       - cfa/release:
           requires:
             - test

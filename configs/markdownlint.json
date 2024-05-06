@@ -1,7 +1,7 @@
 {
   "commands-show-output": false,
   "first-line-h1": false,
-  "header-increment": false,
+  "heading-increment": false,
   "line-length": {
     "code_blocks": false,
     "tables": false,
@@ -10,10 +10,10 @@
   },
   "no-bare-urls": false,
   "no-blanks-blockquote": false,
-  "no-duplicate-header": {
-    "allow_different_nesting": true
+  "no-duplicate-heading": {
+    "siblings_only": true
   },
-  "no-emphasis-as-header": false,
+  "no-emphasis-as-heading": false,
   "no-hard-tabs": {
     "code_blocks": false
   },
@@ -25,5 +25,8 @@
   "single-h1": false,
   "no-inline-html": false,
   "no-angle-brackets": false,
-  "no-curly-braces": false
+  "no-curly-braces": false,
+  "link-image-style": {
+    "shortcut": false
+  }
 }
