@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`electron-lint-markdown-ts-check should type check code blocks 1`] = `
+exports[`lint-roller-markdown-ts-check should type check code blocks 1`] = `
 "ts-check.md:49:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict
 ts-check.md:55:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-ignore/@ts-type/@ts-window-type, they conflict
 [96mts-check.md[0m:[93m128[0m:[93m8[0m - [91merror[0m[90m TS2339: [0mProperty 'myAwesomeAPI' does not exist on type 'Window & typeof globalThis'.

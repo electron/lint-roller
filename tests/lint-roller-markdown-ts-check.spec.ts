@@ -11,7 +11,7 @@ function runLintMarkdownTsCheck(...args: string[]) {
   );
 }
 
-describe('electron-lint-markdown-ts-check', () => {
+describe('lint-roller-markdown-ts-check', () => {
   it('should run clean when there are no errors', () => {
     const { status, stdout } = runLintMarkdownTsCheck('--root', FIXTURES_DIR, 'ts-check-clean.md');
 
@@ -62,5 +62,19 @@ describe('electron-lint-markdown-ts-check', () => {
 
     expect(stdout.replace(FIXTURES_DIR, '<root>')).toMatchSnapshot();
     expect(status).toEqual(1);
+  });
+
+  it('can use a custom config', () => {
+    const { status, stdout, stderr } = runLintMarkdownTsCheck(
+      '--root',
+      FIXTURES_DIR,
+      '--config',
+      'custom-config.json',
+      'ts-check-custom-config.md',
+    );
+
+    expect(stdout).toEqual('');
+    expect(stderr).toEqual('');
+    expect(status).toEqual(0);
   });
 });

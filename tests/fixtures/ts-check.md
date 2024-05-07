@@ -212,3 +212,11 @@ declare global {
 window.AwesomeAPI.foo(42)
 window.OtherAwesomeAPI.bar('baz')
 ```
+
+```js @ts-expect-error=[1]
+fs.wrongApi('hello')
+```
+
+```ts @ts-expect-error=[1]
+fs.wrongApi('hello')
+```

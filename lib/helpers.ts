@@ -1,4 +1,5 @@
 import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
 import * as os from 'node:os';
 
 import { range as balancedRange } from 'balanced-match';
@@ -93,4 +94,27 @@ export function findCurlyBracedDirectives(directive: string, str: string) {
   }
 
   return matches;
+}
+
+export interface LintRollerTsCheckConfig {
+  defaultImports?: string[];
+  typings?: string[];
+}
+
+export interface LintRollerConfig {
+  'markdown-ts-check'?: LintRollerTsCheckConfig;
+}
+
+export function loadConfig(path: string) {
+  if (!fs.existsSync(path)) {
+    return undefined;
+  }
+
+  const config = fs.readFileSync(path, 'utf8');
+
+  try {
+    return JSON.parse(config) as LintRollerConfig;
+  } catch {
+    throw new Error(`Couldn't parse config at ${path}`);
+  }
 }
