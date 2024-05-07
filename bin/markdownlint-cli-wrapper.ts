@@ -9,7 +9,7 @@ if (require.main === module) {
     [
       require.resolve('markdownlint-cli'),
       '-r',
-      path.resolve(__dirname, '../../markdownlint-rules'),
+      path.resolve(__dirname, '../../markdownlint-rules/index.js'),
       ...process.argv.slice(2),
     ],
     { stdio: 'inherit' },
