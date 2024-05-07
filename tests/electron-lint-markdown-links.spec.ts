@@ -11,8 +11,6 @@ function runLintMarkdownLinks(...args: string[]) {
   );
 }
 
-const nodeVersion = parseInt(process.version.match(/^v(\d+)\./)![1]);
-
 describe('electron-lint-markdown-links', () => {
   it('should catch broken internal links', () => {
     const { status, stdout } = runLintMarkdownLinks(
@@ -130,18 +128,16 @@ describe('electron-lint-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
-  if (nodeVersion >= 18) {
-    it('should be able to fetch GitHub label URLs', () => {
-      const { status } = runLintMarkdownLinks(
-        '--root',
-        FIXTURES_DIR,
-        'github-label-link.md',
-        '--fetch-external-links',
-      );
+  it('should be able to fetch GitHub label URLs', () => {
+    const { status } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      'github-label-link.md',
+      '--fetch-external-links',
+    );
 
-      expect(status).toEqual(0);
-    });
-  }
+    expect(status).toEqual(0);
+  });
 
   it('should be able to fetch twitter links', () => {
     const { status } = runLintMarkdownLinks(
