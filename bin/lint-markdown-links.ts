@@ -33,12 +33,6 @@ const diagnosticOptions: DiagnosticOptions = {
 };
 
 async function fetchExternalLink(link: string, checkRedirects = false) {
-  // Use global fetch if available, otherwise fall back to node-fetch
-  if (!('fetch' in global)) {
-    const { default: fetch } = await import('node-fetch');
-    (global as any).fetch = fetch;
-  }
-
   try {
     const response = await fetch(link, {
       headers: {
