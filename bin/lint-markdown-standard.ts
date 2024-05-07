@@ -170,7 +170,7 @@ function parseCommandLine() {
   const showUsage = (arg?: string): boolean => {
     if (!arg || arg.startsWith('-')) {
       console.log(
-        'Usage: electron-lint-markdown-standard [--root <dir>] <globs> [-h|--help] [--fix]' +
+        'Usage: lint-roller-markdown-standard [--root <dir>] <globs> [-h|--help] [--fix]' +
           '[--ignore <globs>] [--ignore-path <path>] [--semi]',
       );
       process.exit(1);

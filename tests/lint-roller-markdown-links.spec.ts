@@ -11,7 +11,7 @@ function runLintMarkdownLinks(...args: string[]) {
   );
 }
 
-describe('electron-lint-markdown-links', () => {
+describe('lint-roller-markdown-links', () => {
   it('should catch broken internal links', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`electron-lint-markdown-standard can detect errors in code blocks 1`] = `
+exports[`lint-roller-markdown-standard can detect errors in code blocks 1`] = `
 "
    dirty.md
          6:1:      Unexpected var, use let or const instead.
@@ -28,7 +28,7 @@ There are 20 errors in '<root>'
 "
 `;
 
-exports[`electron-lint-markdown-standard can fix cleanable errors with --fix option 1`] = `
+exports[`lint-roller-markdown-standard can fix cleanable errors with --fix option 1`] = `
 "# The Cleanable Readme
 
 This is a markdown file with some javascript code blocks in it.
@@ -105,7 +105,7 @@ and wrapped arrays:
 "
 `;
 
-exports[`electron-lint-markdown-standard outputs uncleanable errors with --fix option 1`] = `
+exports[`lint-roller-markdown-standard outputs uncleanable errors with --fix option 1`] = `
 "# The Dirty Readme
 
 This is a markdown file with some javascript code blocks in it.
