@@ -112,5 +112,9 @@ export function loadConfig(path: string) {
 
   const config = fs.readFileSync(path, 'utf8');
 
-  return JSON.parse(config) as LintRollerConfig;
+  try {
+    return JSON.parse(config) as LintRollerConfig;
+  } catch {
+    throw new Error(`Couldn't parse config at ${path}`);
+  }
 }
