@@ -7,7 +7,12 @@ function runLintMarkdownTsCheck(...args: string[]) {
   return cp.spawnSync(
     process.execPath,
     [path.resolve(__dirname, '../dist/bin/lint-markdown-ts-check.js'), ...args],
-    { stdio: 'pipe', encoding: 'utf-8', cwd: FIXTURES_DIR },
+    {
+      stdio: 'pipe',
+      encoding: 'utf-8',
+      cwd: FIXTURES_DIR,
+      env: { NODE_OPTIONS: '--no-deprecation' },
+    },
   );
 }
 
