@@ -4,7 +4,8 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { visit } from 'unist-util-visit';
 
 export const names = ['EMD003', 'no-curly-braces'];
-export const description = 'No unescaped opening curly braces in text (does not play nice with MDX)';
+export const description =
+  'No unescaped opening curly braces in text (does not play nice with MDX)';
 export const tags = ['braces'];
 
 const UNESCAPED_REGEX = /(?<!\\){/g;
@@ -31,7 +32,10 @@ function EMD003(params, onError) {
           tree,
           (node) => node.type === 'text',
           (node) => {
-            const rawContent = childToken.line.slice(node.position.start.offset, node.position.end.offset);
+            const rawContent = childToken.line.slice(
+              node.position.start.offset,
+              node.position.end.offset,
+            );
 
             if (rawContent.match(UNESCAPED_REGEX) !== null) {
               addError(onError, token.lineNumber, 'Unescaped opening curly brace');
@@ -41,6 +45,6 @@ function EMD003(params, onError) {
       }
     }
   });
-};
+}
 
 export { EMD003 as function };

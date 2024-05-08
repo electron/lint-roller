@@ -4,7 +4,8 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { visit } from 'unist-util-visit';
 
 export const names = ['EMD002', 'no-angle-brackets'];
-export const description = 'No unescaped opening angle brackets in text (does not play nice with MDX)';
+export const description =
+  'No unescaped opening angle brackets in text (does not play nice with MDX)';
 export const tags = ['brackets'];
 
 const UNESCAPED_REGEX = /(?<!\\)<(?!\s)/g;
@@ -32,7 +33,10 @@ function EMD002(params, onError) {
           tree,
           (node) => node.type === 'text',
           (node) => {
-            const rawContent = childToken.line.slice(node.position.start.offset, node.position.end.offset);
+            const rawContent = childToken.line.slice(
+              node.position.start.offset,
+              node.position.end.offset,
+            );
 
             if (rawContent.match(UNESCAPED_REGEX) !== null) {
               addError(onError, token.lineNumber, 'Unescaped opening angle bracket');
@@ -42,6 +46,6 @@ function EMD002(params, onError) {
       }
     }
   });
-};
+}
 
 export { EMD002 as function };
