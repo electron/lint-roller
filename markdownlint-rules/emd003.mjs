@@ -37,8 +37,13 @@ function EMD003(params, onError) {
               node.position.end.offset,
             );
 
-            if (rawContent.match(UNESCAPED_REGEX) !== null) {
-              addError(onError, token.lineNumber, 'Unescaped opening curly brace');
+            const matches = rawContent.matchAll(UNESCAPED_REGEX);
+
+            for (const match of matches) {
+              addError(onError, childToken.lineNumber, 'Unescaped opening curly brace', undefined, [
+                node.position.start.offset + 1 + match.index,
+                1,
+              ]);
             }
           },
         );
