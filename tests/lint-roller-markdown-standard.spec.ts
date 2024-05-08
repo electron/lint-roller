@@ -3,6 +3,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
+import { describe, expect, it } from 'vitest';
+
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
 
 function runLintMarkdownStandard(...args: string[]) {

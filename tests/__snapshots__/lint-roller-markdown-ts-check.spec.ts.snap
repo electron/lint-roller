@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`lint-roller-markdown-ts-check should type check code blocks 1`] = `
+exports[`lint-roller-markdown-ts-check > should type check code blocks 1`] = `
 "ts-check.md:37:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-type/@ts-window-type, they conflict
 ts-check.md:43:1: Code block has both @ts-nocheck and @ts-expect-error/@ts-type/@ts-window-type, they conflict
 [96mts-check.md[0m:[93m109[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'a'.
