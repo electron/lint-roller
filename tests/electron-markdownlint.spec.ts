@@ -117,4 +117,46 @@ describe('electron-markdownlint', () => {
     expect(stdout).toBe('');
     expect(status).toEqual(0);
   });
+
+  it('should not allow newlines in link text if EMD004 enabled', () => {
+    const { status, stderr, stdout } = cp.spawnSync(
+      process.execPath,
+      [
+        path.resolve(__dirname, '../dist/bin/markdownlint-cli-wrapper.js'),
+        '--enable',
+        'EMD004',
+        '--',
+        path.resolve(FIXTURES_DIR, 'newline-in-link-text.md'),
+      ],
+      { stdio: 'pipe', encoding: 'utf-8' },
+    );
+
+    let fixturesRoot = `${FIXTURES_DIR}${path.sep}`;
+
+    if (os.platform() === 'win32') {
+      fixturesRoot = fixturesRoot.replace(/\\/g, '\\\\');
+    }
+
+    expect(stderr.replace(new RegExp(fixturesRoot, 'g'), '<root>')).toMatchSnapshot();
+    expect(stdout).toBe('');
+    expect(status).toEqual(1);
+  });
+
+  it('should allow newlines in link text if EMD004 not enabled', () => {
+    const { status, stderr, stdout } = cp.spawnSync(
+      process.execPath,
+      [
+        path.resolve(__dirname, '../dist/bin/markdownlint-cli-wrapper.js'),
+        '--disable',
+        'EMD004',
+        '--',
+        path.resolve(FIXTURES_DIR, 'newline-in-link-text.md'),
+      ],
+      { stdio: 'pipe', encoding: 'utf-8' },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toBe('');
+    expect(status).toEqual(0);
+  });
 });
