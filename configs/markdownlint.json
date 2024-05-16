@@ -26,6 +26,7 @@
   "no-inline-html": false,
   "no-angle-brackets": false,
   "no-curly-braces": false,
+  "no-newline-in-links": false,
   "link-image-style": {
     "shortcut": false
   }
