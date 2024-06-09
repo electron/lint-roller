@@ -27,7 +27,7 @@ interface Options {
   ignoreGlobs?: string[];
 }
 
-export async function getApiHistoryBlocks(content: string): Promise<HTML[]> {
+export async function findPossibleApiHistoryBlocks(content: string): Promise<HTML[]> {
   const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
     fromMarkdown: typeof FromMarkdownFunction;
   };
@@ -40,8 +40,9 @@ export async function getApiHistoryBlocks(content: string): Promise<HTML[]> {
   visit(
     tree,
     // ! Don't use test() because it doesn't reset the regex state
+    // Very loose check for YAML history blocks to help catch user error
     (node) =>
-      node.type === 'html' && (node as Literal<string>).value.search(apiHistoryRegex) !== -1,
+      node.type === 'html' && (node as Literal<string>).value.toLowerCase().includes("```") && (node as Literal<string>).value.toLowerCase().includes("yaml") && (node as Literal<string>).value.toLowerCase().includes("history"),
     (node: Node) => {
       codeBlocks.push(node as HTML);
     },
@@ -72,15 +73,15 @@ async function main(
     const filepath = workspace.getWorkspaceRelativePath(uri);
     const changes: TextEdit[] = [];
 
-    const historyBlocks = await getApiHistoryBlocks(document.getText());
+    const possibleHistoryBlocks = await findPossibleApiHistoryBlocks(document.getText());
 
-    for (const historyBlock of historyBlocks) {
-      const regexMatchIterator = historyBlock.value.matchAll(apiHistoryRegex);
+    for (const possibleHistoryBlock of possibleHistoryBlocks) {
+      const regexMatchIterator = possibleHistoryBlock.value.matchAll(apiHistoryRegex);
       const regexMatches = Array.from(regexMatchIterator);
 
       if (regexMatches.length !== 1 || regexMatches[0].length !== 3) {
         console.error(
-          `Error parsing ${filepath}\nInternal error: Couldn't extract matches from history block`,
+          `Error parsing ${filepath}\nInternal error: Couldn't extract matches from possible history block, did you use the correct format?:\n${possibleHistoryBlock.value}`,
         );
         // ? Does this cause a memory leak? Maybe break for loop first.
         process.exit(1);
