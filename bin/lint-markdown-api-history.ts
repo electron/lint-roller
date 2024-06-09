@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
+// ? Optimize these imports
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as minimist from 'minimist';
 
-import { DocsWorkspace, MarkdownParser } from '../lib/markdown';
-import { TextDocument, TextEdit, Range } from 'vscode-languageserver-textdocument';
+import { DocsWorkspace } from '../lib/markdown';
 import { URI } from 'vscode-uri';
 import { parse as parseYaml } from 'yaml';
+import { z } from 'zod';
 
 import type { HTML } from 'mdast';
 import type { Node, Literal } from 'unist';
@@ -16,6 +17,7 @@ import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markd
 import { dynamicImport } from '../lib/helpers';
 
 const apiHistoryRegex: RegExp = /<!--\r?\n(```YAML history\r?\n([\s\S]*?)\r?\n```)\r?\n-->/g;
+const apiHistoryDescriptionRegex: RegExp = /^[A-Za-z\`\-. ]+$/;
 
 // TODO: Add option for CI to use to validate the PR that triggered the CI run
 interface Options {
@@ -42,7 +44,10 @@ export async function findPossibleApiHistoryBlocks(content: string): Promise<HTM
     // ! Don't use test() because it doesn't reset the regex state
     // Very loose check for YAML history blocks to help catch user error
     (node) =>
-      node.type === 'html' && (node as Literal<string>).value.toLowerCase().includes("```") && (node as Literal<string>).value.toLowerCase().includes("yaml") && (node as Literal<string>).value.toLowerCase().includes("history"),
+      node.type === 'html' &&
+      (node as Literal<string>).value.toLowerCase().includes('```') &&
+      (node as Literal<string>).value.toLowerCase().includes('yaml') &&
+      (node as Literal<string>).value.toLowerCase().includes('history'),
     (node: Node) => {
       codeBlocks.push(node as HTML);
     },
@@ -64,45 +69,86 @@ async function main(
   }: Options,
 ) {
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
-  const parser = new MarkdownParser();
-  let errors = false;
+
+  const changeSchema = z.object({
+    // ? Maybe make fetch before this to check latest PR number and check if in range
+    'pr-url': z.string().url().startsWith('https://github.com/electron/electron/pull/'),
+    // ? Maybe create a list of breaking change headers from file and validate against it here
+    'breaking-changes-header': z.string().min(3).optional(),
+    description: z.string().min(3).max(72).regex(apiHistoryDescriptionRegex).optional(),
+  });
+
+  const historySchema = z.object({
+    added: z.array(changeSchema).optional(),
+    deprecated: z.array(changeSchema).optional(),
+    removed: z.array(changeSchema).optional(),
+    changes: z.array(changeSchema).optional(),
+  });
+
+  let documentCounter = 0;
+  let historyBlockCounter = 0;
+  let errorCounter = 0;
 
   // Collect diagnostics for all documents in the workspace
   for (const document of await workspace.getAllMarkdownDocuments()) {
     const uri = URI.parse(document.uri);
     const filepath = workspace.getWorkspaceRelativePath(uri);
-    const changes: TextEdit[] = [];
+
+    documentCounter++;
 
     const possibleHistoryBlocks = await findPossibleApiHistoryBlocks(document.getText());
 
     for (const possibleHistoryBlock of possibleHistoryBlocks) {
+      historyBlockCounter++;
+
       const regexMatchIterator = possibleHistoryBlock.value.matchAll(apiHistoryRegex);
       const regexMatches = Array.from(regexMatchIterator);
 
       if (regexMatches.length !== 1 || regexMatches[0].length !== 3) {
         console.error(
-          `Error parsing ${filepath}\nInternal error: Couldn't extract matches from possible history block, did you use the correct format?:\n${possibleHistoryBlock.value}`,
+          `Error parsing ${filepath}\nCouldn't extract matches from possible history block, did you use the correct format?:\n${possibleHistoryBlock.value}`,
         );
-        // ? Does this cause a memory leak? Maybe break for loop first.
-        process.exit(1);
+        errorCounter++;
+        continue;
       }
 
       const historyYaml = regexMatches[0][2];
 
+      let unsafeHistory = null;
+
       try {
-        const history = parseYaml(historyYaml);
-        console.log(history);
+        unsafeHistory = parseYaml(historyYaml);
       } catch (error) {
-        console.error(`Error parsing ${filepath}\n(YAML) ${error}`);
-        // ? Does this cause a memory leak? Maybe break for loop first.
-        process.exit(1);
+        console.error(
+          `Error parsing\n${possibleHistoryBlock.value}\nin: ${filepath}\n(YAML) ${error}`,
+        );
+        errorCounter++;
+        continue;
       }
+
+      if (!validateWithSchema) continue;
+
+      const safeHistory = historySchema.safeParse(unsafeHistory);
+
+      if (!safeHistory.success) {
+        console.error(
+          `Error validating YAML:\n${possibleHistoryBlock.value}\nin: ${filepath}\n${JSON.stringify(unsafeHistory, null, 4)}\n${safeHistory.error}`,
+        );
+        errorCounter++;
+        continue;
+      }
+
+      // ? Maybe collect all api history and export it to a single file for future use.
     }
 
     // TODO: Replace user YAML with result of <https://eemeli.org/yaml/#tostring-options> for consistent style (but not in CI)
   }
 
-  return errors;
+  console.log(
+    `Processed ${historyBlockCounter} API history block(s) in ${documentCounter} document(s) with ${errorCounter} error(s).`,
+  );
+
+  return errorCounter > 0;
 }
 
 function parseCommandLine() {
