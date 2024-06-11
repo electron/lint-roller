@@ -8,16 +8,28 @@ import * as minimist from 'minimist';
 import { DocsWorkspace } from '../lib/markdown';
 import { URI } from 'vscode-uri';
 import { parse as parseYaml } from 'yaml';
-import { z } from 'zod';
 
 import type { HTML } from 'mdast';
 import type { Node, Literal } from 'unist';
 import type { visit as VisitFunction } from 'unist-util-visit';
 import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import { dynamicImport } from '../lib/helpers';
+import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
 
 const apiHistoryRegex: RegExp = /<!--\r?\n(```YAML history\r?\n([\s\S]*?)\r?\n```)\r?\n-->/g;
-const apiHistoryDescriptionRegex: RegExp = /^[A-Za-z\`\-. ]+$/;
+
+interface ChangeSchema {
+  'pr-url': string;
+  'breaking-changes-header'?: string;
+  description?: string;
+}
+
+interface ApiHistory {
+  added?: ChangeSchema[];
+  deprecated?: ChangeSchema[];
+  removed?: ChangeSchema[];
+  changes?: ChangeSchema[];
+}
 
 // TODO: Add option for CI to use to validate the PR that triggered the CI run
 interface Options {
@@ -60,34 +72,37 @@ async function main(
   workspaceRoot: string,
   globs: string[],
   {
-    checkPlacement = true,
-    checkPullRequestLinks = false,
-    checkBreakingChangesHeaders = false,
-    checkDescriptions = false,
-    validateWithSchema = true,
+    checkPlacement,
+    checkPullRequestLinks,
+    checkBreakingChangesHeaders,
+    checkDescriptions,
+    validateWithSchema,
     ignoreGlobs = [],
   }: Options,
 ) {
-  const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
-
-  const changeSchema = z.object({
-    // ? Maybe make fetch before this to check latest PR number and check if in range
-    'pr-url': z.string().url().startsWith('https://github.com/electron/electron/pull/'),
-    // ? Maybe create a list of breaking change headers from file and validate against it here
-    'breaking-changes-header': z.string().min(3).optional(),
-    description: z.string().min(3).max(72).regex(apiHistoryDescriptionRegex).optional(),
-  });
-
-  const historySchema = z.object({
-    added: z.array(changeSchema).optional(),
-    deprecated: z.array(changeSchema).optional(),
-    removed: z.array(changeSchema).optional(),
-    changes: z.array(changeSchema).optional(),
-  });
-
   let documentCounter = 0;
   let historyBlockCounter = 0;
   let errorCounter = 0;
+
+  const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
+
+  let validateAgainstSchema: ValidateFunction<ApiHistory> | null = null;
+
+  if (validateWithSchema) {
+    try {
+      const ajv = new Ajv();
+      // TODO: Allow user to provide path to schema file
+      const ApiHistorySchemaFile = fs.readFileSync(
+        path.resolve(__dirname, '../../', 'api-history.schema.json'),
+        { encoding: 'utf-8' },
+      );
+      const ApiHistorySchema = JSON.parse(ApiHistorySchemaFile) as JSONSchemaType<ApiHistory>;
+      validateAgainstSchema = ajv.compile(ApiHistorySchema);
+    } catch (error) {
+      console.error(`Error reading API history schema: ${error}`);
+      return true;
+    }
+  }
 
   // Collect diagnostics for all documents in the workspace
   for (const document of await workspace.getAllMarkdownDocuments()) {
@@ -126,13 +141,13 @@ async function main(
         continue;
       }
 
-      if (!validateWithSchema) continue;
+      if (!validateWithSchema || validateAgainstSchema === null) continue;
 
-      const safeHistory = historySchema.safeParse(unsafeHistory);
+      const isValid = validateAgainstSchema(unsafeHistory);
 
-      if (!safeHistory.success) {
+      if (!isValid) {
         console.error(
-          `Error validating YAML:\n${possibleHistoryBlock.value}\nin: ${filepath}\n${JSON.stringify(unsafeHistory, null, 4)}\n${safeHistory.error}`,
+          `Error validating YAML:\n${possibleHistoryBlock.value}\nin: ${filepath}\n${JSON.stringify(unsafeHistory, null, 4)}\n${JSON.stringify(validateAgainstSchema.errors, null, 4)}`,
         );
         errorCounter++;
         continue;
@@ -175,6 +190,13 @@ function parseCommandLine() {
     ],
     string: ['root', 'ignore', 'ignore-path'],
     unknown: showUsage,
+    default: {
+      'check-placement': true,
+      'check-pull-request-links': false,
+      'check-breaking-changes-headers': false,
+      'check-descriptions': false,
+      'validate-with-schema': true,
+    },
   });
 
   if (opts.help || !opts._.length) showUsage();
