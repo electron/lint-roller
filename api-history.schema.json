@@ -40,12 +40,6 @@
         "$ref": "#/definitions/changeSchema"
       }
     },
-    "removed": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/changeSchema"
-      }
-    },
     "changes": {
       "type": "array",
       "items": {

@@ -27,7 +27,6 @@ interface ChangeSchema {
 interface ApiHistory {
   added?: ChangeSchema[];
   deprecated?: ChangeSchema[];
-  removed?: ChangeSchema[];
   changes?: ChangeSchema[];
 }
 
