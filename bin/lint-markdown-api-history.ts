@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // ? Optimize these imports
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import * as minimist from 'minimist';
 
 import { DocsWorkspace } from '../lib/markdown';
@@ -92,8 +92,8 @@ async function main(
     try {
       const ajv = new Ajv();
       // TODO: Allow user to provide path to schema file
-      const ApiHistorySchemaFile = fs.readFileSync(
-        path.resolve(__dirname, '../../', 'api-history.schema.json'),
+      const ApiHistorySchemaFile = await readFile(
+        resolve(__dirname, '../../', 'api-history.schema.json'),
         { encoding: 'utf-8' },
       );
       const ApiHistorySchema = JSON.parse(ApiHistorySchemaFile) as JSONSchemaType<ApiHistory>;
@@ -204,40 +204,47 @@ function parseCommandLine() {
   return opts;
 }
 
-if (require.main === module) {
-  const opts = parseCommandLine();
-
-  if (!opts.root) {
-    opts.root = '.';
-  }
-
-  if (opts.ignore) {
-    opts.ignore = Array.isArray(opts.ignore) ? opts.ignore : [opts.ignore];
-  } else {
-    opts.ignore = [];
-  }
-
-  if (opts['ignore-path']) {
-    const ignores = fs.readFileSync(path.resolve(opts['ignore-path']), { encoding: 'utf-8' });
-
-    for (const ignore of ignores.split('\n')) {
-      opts.ignore.push(ignore.trimEnd());
+async function init() {
+  try {
+    const opts = parseCommandLine();
+  
+    if (!opts.root) {
+      opts.root = '.';
     }
-  }
-
-  main(path.resolve(process.cwd(), opts.root), opts._, {
-    checkPlacement: opts['check-placement'],
-    checkPullRequestLinks: opts['check-pull-request-links'],
-    checkBreakingChangesHeaders: opts['check-breaking-changes-headers'],
-    checkDescriptions: opts['check-descriptions'],
-    validateWithSchema: opts['validate-with-schema'],
-    ignoreGlobs: opts.ignore,
-  })
-    .then((errors) => {
-      if (errors) process.exit(1);
+  
+    if (opts.ignore) {
+      opts.ignore = Array.isArray(opts.ignore) ? opts.ignore : [opts.ignore];
+    } else {
+      opts.ignore = [];
+    }
+  
+    if (opts['ignore-path']) {
+      const ignores = await readFile(resolve(opts['ignore-path']), { encoding: 'utf-8' });
+  
+      for (const ignore of ignores.split('\n')) {
+        opts.ignore.push(ignore.trimEnd());
+      }
+    }
+  
+    const errors = await main(resolve(process.cwd(), opts.root), opts._, {
+      checkPlacement: opts['check-placement'],
+      checkPullRequestLinks: opts['check-pull-request-links'],
+      checkBreakingChangesHeaders: opts['check-breaking-changes-headers'],
+      checkDescriptions: opts['check-descriptions'],
+      validateWithSchema: opts['validate-with-schema'],
+      ignoreGlobs: opts.ignore,
     })
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
+
+    if (errors) process.exit(1);
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  init().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }
