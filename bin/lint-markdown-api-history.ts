@@ -170,7 +170,7 @@ function parseCommandLine() {
     if (!arg || arg.startsWith('-')) {
       console.log(
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs> [-h|--help] [--check-placement] ' +
-          '[--check-pull-request-links] [--check-breaking-changes-headers] [--check-descriptions] [--validate-with-schema] [--ignore <globs>]',
+          '[--check-pull-request-links] [--check-breaking-changes-headers] [--check-descriptions] [--validate-with-schema] [--ignore <globs>] [--ignore-path <path>]',
       );
       process.exit(1);
     }
