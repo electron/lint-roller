@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // ? Optimize these imports
-import { readFile } from 'node:fs/promises';
+import { readFile, access, constants } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import * as minimist from 'minimist';
 
@@ -32,12 +32,13 @@ interface ApiHistory {
 
 // TODO: Add option for CI to use to validate the PR that triggered the CI run
 interface Options {
-  checkPlacement?: boolean;
-  checkPullRequestLinks?: boolean;
-  checkBreakingChangesHeaders?: boolean;
-  checkDescriptions?: boolean;
-  validateWithSchema?: boolean;
-  ignoreGlobs?: string[];
+  checkPlacement: boolean;
+  checkPullRequestLinks: boolean;
+  checkBreakingChangesHeaders: boolean;
+  checkDescriptions: boolean;
+  validateWithSchema: boolean;
+  ignoreGlobs: string[];
+  schema: string;
 }
 
 export async function findPossibleApiHistoryBlocks(content: string): Promise<HTML[]> {
@@ -76,6 +77,7 @@ async function main(
     checkBreakingChangesHeaders,
     checkDescriptions,
     validateWithSchema,
+    schema,
     ignoreGlobs = [],
   }: Options,
 ) {
@@ -90,15 +92,11 @@ async function main(
   if (validateWithSchema) {
     try {
       const ajv = new Ajv();
-      // TODO: Allow user to provide path to schema file
-      const ApiHistorySchemaFile = await readFile(
-        resolve(__dirname, '../../', 'api-history.schema.json'),
-        { encoding: 'utf-8' },
-      );
+      const ApiHistorySchemaFile = await readFile(schema, { encoding: 'utf-8' });
       const ApiHistorySchema = JSON.parse(ApiHistorySchemaFile) as JSONSchemaType<ApiHistory>;
       validateAgainstSchema = ajv.compile(ApiHistorySchema);
     } catch (error) {
-      console.error(`Error reading API history schema: ${error}`);
+      console.error(`Error reading API history schema:\n${error}`);
       return true;
     }
   }
@@ -120,7 +118,9 @@ async function main(
 
       if (regexMatches.length !== 1 || regexMatches[0].length !== 3) {
         console.error(
-          `Error parsing ${filepath}\nCouldn't extract matches from possible history block, did you use the correct format?:\n${possibleHistoryBlock.value}`,
+          `Error parsing ${filepath}\n
+          Couldn't extract matches from possible history block, did you use the correct format?:\n
+          ${possibleHistoryBlock.value}`,
         );
         errorCounter++;
         continue;
@@ -134,7 +134,10 @@ async function main(
         unsafeHistory = parseYaml(historyYaml);
       } catch (error) {
         console.error(
-          `Error parsing\n${possibleHistoryBlock.value}\nin: ${filepath}\n(YAML) ${error}`,
+          `Error parsing\n
+          ${possibleHistoryBlock.value}\n
+          in: ${filepath}\n
+          (YAML) ${error}`,
         );
         errorCounter++;
         continue;
@@ -146,7 +149,11 @@ async function main(
 
       if (!isValid) {
         console.error(
-          `Error validating YAML:\n${possibleHistoryBlock.value}\nin: ${filepath}\n${JSON.stringify(unsafeHistory, null, 4)}\n${JSON.stringify(validateAgainstSchema.errors, null, 4)}`,
+          `Error validating YAML:\n
+          ${possibleHistoryBlock.value}\n
+          in: ${filepath}\n
+          ${JSON.stringify(unsafeHistory, null, 4)}\n
+          ${JSON.stringify(validateAgainstSchema.errors, null, 4)}`,
         );
         errorCounter++;
         continue;
@@ -169,8 +176,11 @@ function parseCommandLine() {
   const showUsage = (arg?: string): boolean => {
     if (!arg || arg.startsWith('-')) {
       console.log(
-        'Usage: lint-roller-markdown-api-history [--root <dir>] <globs> [-h|--help] [--check-placement] ' +
-          '[--check-pull-request-links] [--check-breaking-changes-headers] [--check-descriptions] [--validate-with-schema] [--ignore <globs>] [--ignore-path <path>]',
+        'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
+          ' [-h|--help]' +
+          ' [--check-placement] [--check-pull-request-links] [--check-breaking-changes-headers] [--check-descriptions]' +
+          ' [--validate-with-schema] [--schema <path>]' +
+          ' [--ignore <globs>] [--ignore-path <path>]',
       );
       process.exit(1);
     }
@@ -187,7 +197,7 @@ function parseCommandLine() {
       'check-descriptions',
       'validate-with-schema',
     ],
-    string: ['root', 'ignore', 'ignore-path'],
+    string: ['root', 'ignore', 'ignore-path', 'schema'],
     unknown: showUsage,
     default: {
       'check-placement': true,
@@ -195,6 +205,7 @@ function parseCommandLine() {
       'check-breaking-changes-headers': false,
       'check-descriptions': false,
       'validate-with-schema': true,
+      schema: resolve(__dirname, '../../', 'api-history.schema.json'),
     },
   });
 
@@ -206,25 +217,35 @@ function parseCommandLine() {
 async function init() {
   try {
     const opts = parseCommandLine();
-  
+
     if (!opts.root) {
       opts.root = '.';
     }
-  
+
     if (opts.ignore) {
       opts.ignore = Array.isArray(opts.ignore) ? opts.ignore : [opts.ignore];
     } else {
       opts.ignore = [];
     }
-  
+
     if (opts['ignore-path']) {
       const ignores = await readFile(resolve(opts['ignore-path']), { encoding: 'utf-8' });
-  
+
       for (const ignore of ignores.split('\n')) {
         opts.ignore.push(ignore.trimEnd());
       }
     }
-  
+
+    if (opts.schema) {
+      opts.schema = resolve(process.cwd(), opts.schema);
+      try {
+        await access(opts.schema, constants.F_OK | constants.R_OK);
+      } catch (error) {
+        console.error(`Error accessing schema file: ${opts.schema}\n${error}`);
+        process.exit(1);
+      }
+    }
+
     const errors = await main(resolve(process.cwd(), opts.root), opts._, {
       checkPlacement: opts['check-placement'],
       checkPullRequestLinks: opts['check-pull-request-links'],
@@ -232,7 +253,8 @@ async function init() {
       checkDescriptions: opts['check-descriptions'],
       validateWithSchema: opts['validate-with-schema'],
       ignoreGlobs: opts.ignore,
-    })
+      schema: opts.schema,
+    });
 
     if (errors) process.exit(1);
   } catch (error) {
