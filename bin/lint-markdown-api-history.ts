@@ -11,11 +11,10 @@ import { parse as parseYaml } from 'yaml';
 import type { HTML } from 'mdast';
 import type { Node, Literal } from 'unist';
 import type { visit as VisitFunction } from 'unist-util-visit';
+import type { fromHtml as FromHtmlFunction } from 'hast-util-from-html';
 import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import { dynamicImport } from '../lib/helpers';
 import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
-
-const apiHistoryRegex: RegExp = /<!--\r?\n(```YAML history\r?\n([\s\S]*?)\r?\n```)\r?\n-->/g;
 
 interface ChangeSchema {
   'pr-url': string;
@@ -80,6 +79,13 @@ async function main(
     ignoreGlobs = [],
   }: Options,
 ) {
+  const { fromHtml } = (await dynamicImport('hast-util-from-html')) as {
+    fromHtml: typeof FromHtmlFunction;
+  };
+  const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
+    fromMarkdown: typeof FromMarkdownFunction;
+  };
+
   let documentCounter = 0;
   let historyBlockCounter = 0;
   let errorCounter = 0;
@@ -111,10 +117,20 @@ async function main(
     for (const possibleHistoryBlock of possibleHistoryBlocks) {
       historyBlockCounter++;
 
-      const regexMatchIterator = possibleHistoryBlock.value.matchAll(apiHistoryRegex);
-      const regexMatches = Array.from(regexMatchIterator);
-
-      if (regexMatches.length !== 1 || regexMatches[0].length !== 3) {
+      const {
+        children: [htmlComment],
+      } = fromHtml(possibleHistoryBlock.value);
+      if (htmlComment.type !== 'comment') {
+        continue;
+      }
+      const {
+        children: [codeBlock],
+      } = fromMarkdown(htmlComment.value);
+      if (
+        codeBlock.type !== 'code' ||
+        codeBlock.lang?.toLowerCase() !== 'yaml' ||
+        codeBlock.meta?.trim() !== 'history'
+      ) {
         console.error(
           `Error parsing ${filepath}\n
           Couldn't extract matches from possible history block, did you use the correct format?:\n
@@ -124,12 +140,10 @@ async function main(
         continue;
       }
 
-      const historyYaml = regexMatches[0][2];
-
       let unsafeHistory = null;
 
       try {
-        unsafeHistory = parseYaml(historyYaml);
+        unsafeHistory = parseYaml(codeBlock.value);
       } catch (error) {
         console.error(
           `Error parsing\n
