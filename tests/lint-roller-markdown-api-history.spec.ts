@@ -60,6 +60,20 @@ describe('lint-roller-markdown-api-history', () => {
     expect(status).toEqual(1);
   });
 
+  it('should not run clean when there are format errors', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      MOCKUP_API_HISTORY_SCHEMA,
+      'api-history-format-invalid.md',
+    );
+
+    expect(stderr).toMatch(/did you use the correct format?/);
+    expect(Number(stdoutRegex.exec(stdout)?.[3])).toEqual(1); // 1 error
+    expect(status).toEqual(1);
+  });
+
   it('can ignore a glob', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
