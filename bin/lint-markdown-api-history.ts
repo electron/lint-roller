@@ -204,8 +204,7 @@ function parseCommandLine() {
       'check-pull-request-links': false,
       'check-breaking-changes-headers': false,
       'check-descriptions': false,
-      'validate-with-schema': true,
-      schema: resolve(__dirname, '../../', 'api-history.schema.json'),
+      'validate-with-schema': true
     },
   });
 
@@ -234,6 +233,11 @@ async function init() {
       for (const ignore of ignores.split('\n')) {
         opts.ignore.push(ignore.trimEnd());
       }
+    }
+
+    if (opts['validate-with-schema'] === true && !opts.schema) {
+      console.error('Error: --validate-with-schema (true by default) requires --schema');
+      process.exit(1);
     }
 
     if (opts.schema) {
