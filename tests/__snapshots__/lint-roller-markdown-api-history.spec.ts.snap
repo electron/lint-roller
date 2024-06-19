@@ -1,6 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`lint-roller-markdown-api-history > should lint api history 1`] = `
-"Processed 2 API history block(s) in 2 document(s) with 1 error(s).
-"
-`;

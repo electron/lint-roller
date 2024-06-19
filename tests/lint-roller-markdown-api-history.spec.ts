@@ -28,7 +28,10 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stdout).toMatch(stdoutRegex);
-    expect(Number(stdoutRegex.exec(stdout)?.[3])).toEqual(0); // 0 errors
+
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(errors)).toEqual(0);
     expect(status).toEqual(0);
   });
 
@@ -42,7 +45,10 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
-    expect(Number(stdoutRegex.exec(stdout)?.[3])).toEqual(1); // 1 error
+
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
   });
 
@@ -56,7 +62,10 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stderr).toMatch(/"keyword": "minLength"/);
-    expect(Number(stdoutRegex.exec(stdout)?.[3])).toEqual(1); // 1 error
+
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
   });
 
@@ -70,7 +79,10 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stderr).toMatch(/did you use the correct format?/);
-    expect(Number(stdoutRegex.exec(stdout)?.[3])).toEqual(1); // 1 error
+
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
   });
 
@@ -85,8 +97,10 @@ describe('lint-roller-markdown-api-history', () => {
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
-    expect(Number(stdoutRegex.exec(stdout)?.[1])).toEqual(1); // 1 block
-    expect(Number(stdoutRegex.exec(stdout)?.[2])).toEqual(1); // 1 document
+    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(blocks)).toEqual(1);
+    expect(Number(documents)).toEqual(1);
     expect(status).toEqual(0);
   });
 
@@ -103,8 +117,10 @@ describe('lint-roller-markdown-api-history', () => {
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
-    expect(Number(stdoutRegex.exec(stdout)?.[1])).toEqual(0); // 0 blocks
-    expect(Number(stdoutRegex.exec(stdout)?.[2])).toEqual(0); // 0 documents
+    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(blocks)).toEqual(0);
+    expect(Number(documents)).toEqual(0);
     expect(status).toEqual(0);
   });
 
@@ -119,8 +135,10 @@ describe('lint-roller-markdown-api-history', () => {
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
-    expect(Number(stdoutRegex.exec(stdout)?.[1])).toEqual(1); // 1 block
-    expect(Number(stdoutRegex.exec(stdout)?.[2])).toEqual(1); // 1 document
+    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(blocks)).toEqual(1); // 1 block
+    expect(Number(documents)).toEqual(1); // 1 document
     expect(status).toEqual(0);
   });
 
@@ -134,10 +152,12 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stdout).toMatch(stdoutRegex);
-    expect(Number(stdoutRegex.exec(stdout)?.[1])).toEqual(2); // 2 block
-    expect(Number(stdoutRegex.exec(stdout)?.[2])).toEqual(2); // 2 document
-    expect(Number(stdoutRegex.exec(stdout)?.[3])).toEqual(1); // 1 errors
-    expect(stdout).toMatchSnapshot();
+
+    const [blocks, documents, errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(blocks)).toEqual(2); // 2 block
+    expect(Number(documents)).toEqual(2); // 2 document
+    expect(Number(errors)).toEqual(1); // 1 errors
     expect(status).toEqual(1);
   });
 
