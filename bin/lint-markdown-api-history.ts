@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-// ? Optimize these imports
 import { readFile, access, constants } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import * as minimist from 'minimist';
@@ -101,7 +100,6 @@ async function main(
     }
   }
 
-  // Collect diagnostics for all documents in the workspace
   for (const document of await workspace.getAllMarkdownDocuments()) {
     const uri = URI.parse(document.uri);
     const filepath = workspace.getWorkspaceRelativePath(uri);
@@ -204,7 +202,7 @@ function parseCommandLine() {
       'check-pull-request-links': false,
       'check-breaking-changes-headers': false,
       'check-descriptions': false,
-      'validate-with-schema': true
+      'validate-with-schema': true,
     },
   });
 
