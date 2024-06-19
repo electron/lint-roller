@@ -12,10 +12,5 @@ deprecated:
 ```
 -->
 
-* `position` [Point](structures/point.md)
-
 Set a custom position for the traffic light buttons in frameless window.
 Passing `{ x: 0, y: 0 }` will reset the position to default.
-
-> **Note**
-> This function is deprecated. Use [setWindowButtonPosition](#winsetwindowbuttonpositionposition-macos) instead.
