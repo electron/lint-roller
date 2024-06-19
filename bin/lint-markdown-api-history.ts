@@ -120,12 +120,13 @@ async function main(
       const {
         children: [htmlComment],
       } = fromHtml(possibleHistoryBlock.value);
-      if (htmlComment.type !== 'comment') {
-        continue;
-      }
+
+      if (htmlComment.type !== 'comment') continue;
+
       const {
         children: [codeBlock],
       } = fromMarkdown(htmlComment.value);
+
       if (
         codeBlock.type !== 'code' ||
         codeBlock.lang?.toLowerCase() !== 'yaml' ||
