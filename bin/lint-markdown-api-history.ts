@@ -34,7 +34,6 @@ interface Options {
   checkPullRequestLinks: boolean;
   checkBreakingChangesHeaders: boolean;
   checkDescriptions: boolean;
-  validateWithSchema: boolean;
   ignoreGlobs: string[];
   schema: string;
 }
@@ -74,7 +73,6 @@ async function main(
     checkPullRequestLinks,
     checkBreakingChangesHeaders,
     checkDescriptions,
-    validateWithSchema,
     schema,
     ignoreGlobs = [],
   }: Options,
@@ -94,7 +92,7 @@ async function main(
 
   let validateAgainstSchema: ValidateFunction<ApiHistory> | null = null;
 
-  if (validateWithSchema) {
+  if (schema) {
     try {
       const ajv = new Ajv();
       const ApiHistorySchemaFile = await readFile(schema, { encoding: 'utf-8' });
@@ -156,7 +154,7 @@ async function main(
         continue;
       }
 
-      if (!validateWithSchema || validateAgainstSchema === null) continue;
+      if (!schema || validateAgainstSchema === null) continue;
 
       const isValid = validateAgainstSchema(unsafeHistory);
 
@@ -192,7 +190,7 @@ function parseCommandLine() {
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
           ' [-h|--help]' +
           ' [--check-placement] [--check-pull-request-links] [--check-breaking-changes-headers] [--check-descriptions]' +
-          ' [--validate-with-schema] [--schema <path>]' +
+          ' [--schema <path>]' +
           ' [--ignore <globs>] [--ignore-path <path>]',
       );
       process.exit(1);
@@ -208,7 +206,6 @@ function parseCommandLine() {
       'check-pull-request-links',
       'check-breaking-changes-headers',
       'check-descriptions',
-      'validate-with-schema',
     ],
     string: ['root', 'ignore', 'ignore-path', 'schema'],
     unknown: showUsage,
@@ -217,7 +214,6 @@ function parseCommandLine() {
       'check-pull-request-links': false,
       'check-breaking-changes-headers': false,
       'check-descriptions': false,
-      'validate-with-schema': true,
     },
   });
 
@@ -248,11 +244,6 @@ async function init() {
       }
     }
 
-    if (opts['validate-with-schema'] === true && !opts.schema) {
-      console.error('Error: --validate-with-schema (true by default) requires --schema');
-      process.exit(1);
-    }
-
     if (opts.schema) {
       opts.schema = resolve(process.cwd(), opts.schema);
       try {
@@ -268,7 +259,6 @@ async function init() {
       checkPullRequestLinks: opts['check-pull-request-links'],
       checkBreakingChangesHeaders: opts['check-breaking-changes-headers'],
       checkDescriptions: opts['check-descriptions'],
-      validateWithSchema: opts['validate-with-schema'],
       ignoreGlobs: opts.ignore,
       schema: opts.schema,
     });
