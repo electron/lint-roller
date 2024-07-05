@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
 const MOCKUP_API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'mockup-api-history.schema.json');
+const MOCKUP_BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'mockup-breaking-changes.md');
 
 const stdoutRegex =
   /Processed (\d+) API history block\(s\) in (\d+) document\(s\) with (\d+) error\(s\)./;
@@ -24,6 +25,8 @@ describe('lint-roller-markdown-api-history', () => {
       FIXTURES_DIR,
       '--schema',
       MOCKUP_API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      MOCKUP_BREAKING_CHANGES_FILE,
       'api-history-valid.md',
     );
 
@@ -79,6 +82,25 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stderr).toMatch(/did you use the correct format?/);
+
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(errors)).toEqual(1);
+    expect(status).toEqual(1);
+  });
+
+  it('should not run clean when there are missing heading ids', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      MOCKUP_API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      MOCKUP_BREAKING_CHANGES_FILE,
+      'api-history-heading-missing.md',
+    );
+
+    expect(stderr).toMatch(/Couldn't find breaking changes header/);
 
     const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
 

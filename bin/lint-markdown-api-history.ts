@@ -8,7 +8,7 @@ import { DocsWorkspace } from '../lib/markdown';
 import { URI } from 'vscode-uri';
 import { parse as parseYaml } from 'yaml';
 
-import type { HTML } from 'mdast';
+import type { HTML, Heading } from 'mdast';
 import type { Node, Literal } from 'unist';
 import type { visit as VisitFunction } from 'unist-util-visit';
 import type { fromHtml as FromHtmlFunction } from 'hast-util-from-html';
@@ -32,7 +32,7 @@ interface ApiHistory {
 interface Options {
   checkPlacement: boolean;
   checkPullRequestLinks: boolean;
-  checkBreakingChangesHeaders: boolean;
+  breakingChangesFile: string;
   checkDescriptions: boolean;
   ignoreGlobs: string[];
   schema: string;
@@ -71,7 +71,7 @@ async function main(
   {
     checkPlacement,
     checkPullRequestLinks,
-    checkBreakingChangesHeaders,
+    breakingChangesFile,
     checkDescriptions,
     schema,
     ignoreGlobs = [],
@@ -100,6 +100,30 @@ async function main(
       validateAgainstSchema = ajv.compile(ApiHistorySchema);
     } catch (error) {
       console.error(`Error reading API history schema:\n${error}`);
+      return true;
+    }
+  }
+
+  let breakingChangesFileHeadingIds: string[] | null = null;
+
+  if (breakingChangesFile) {
+    try {
+      const breakingChanges = await readFile(breakingChangesFile, { encoding: 'utf-8' });
+      const markdownBreakingChanges = fromMarkdown(breakingChanges);
+      const headings = markdownBreakingChanges.children.filter(e => e.type === "heading" && e.depth === 3) as Heading[];
+      // Convert to GitHub heading ID format
+      breakingChangesFileHeadingIds = headings.map((heading) => 
+        heading.children
+          .reduce((acc, cur) => acc + 
+            (cur as Literal<string>).value
+              .toLowerCase()
+              .replace(/ /g, "-")
+              .replace(/[^a-zA-Z0-9-]/g, ""),
+            ""
+          )
+      )
+    } catch (error) {
+      console.error(`Error reading breaking changes file:\n${error}`);
       return true;
     }
   }
@@ -170,6 +194,36 @@ async function main(
         continue;
       }
 
+      if (breakingChangesFile && breakingChangesFileHeadingIds !== null) {
+        const safeHistory = unsafeHistory as ApiHistory;
+
+        const breakingChangeHeaders: string[] = [];
+
+        const changesAndDeprecations = [
+          ...(safeHistory.changes ?? []),
+          ...(safeHistory.deprecated ?? []),
+        ];
+
+        for (const change of changesAndDeprecations) {
+          if (change['breaking-changes-header']) {
+            breakingChangeHeaders.push(change['breaking-changes-header']);
+          }
+        }
+
+        for (const header of breakingChangeHeaders) {
+          if (!breakingChangesFileHeadingIds.includes(header)) {
+            console.error(
+              `Couldn't find breaking changes header:\n
+              ${header}\n
+              from: ${filepath}\n
+              in: ${breakingChangesFile}\n
+              ${JSON.stringify(safeHistory, null, 4)}`,
+            );
+            errorCounter++;
+          }
+        }
+      }
+
       // ? Maybe collect all api history and export it to a single file for future use.
     }
 
@@ -189,7 +243,7 @@ function parseCommandLine() {
       console.log(
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
           ' [-h|--help]' +
-          ' [--check-placement] [--check-pull-request-links] [--check-breaking-changes-headers] [--check-descriptions]' +
+          ' [--check-placement] [--check-pull-request-links] [--breaking-changes-file <path>] [--check-descriptions]' +
           ' [--schema <path>]' +
           ' [--ignore <globs>] [--ignore-path <path>]',
       );
@@ -204,15 +258,13 @@ function parseCommandLine() {
       'help',
       'check-placement',
       'check-pull-request-links',
-      'check-breaking-changes-headers',
       'check-descriptions',
     ],
-    string: ['root', 'ignore', 'ignore-path', 'schema'],
+    string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
     unknown: showUsage,
     default: {
       'check-placement': true,
       'check-pull-request-links': false,
-      'check-breaking-changes-headers': false,
       'check-descriptions': false,
     },
   });
@@ -254,10 +306,20 @@ async function init() {
       }
     }
 
+    if (opts['breaking-changes-file']) {
+      opts['breaking-changes-file'] = resolve(process.cwd(), opts['breaking-changes-file']);
+      try {
+        await access(opts['breaking-changes-file'], constants.F_OK | constants.R_OK);
+      } catch (error) {
+        console.error(`Error accessing breaking changes file: ${opts['breaking-changes-file']}\n${error}`);
+        process.exit(1);
+      }
+    }
+
     const errors = await main(resolve(process.cwd(), opts.root), opts._, {
       checkPlacement: opts['check-placement'],
       checkPullRequestLinks: opts['check-pull-request-links'],
-      checkBreakingChangesHeaders: opts['check-breaking-changes-headers'],
+      breakingChangesFile: opts['breaking-changes-file'],
       checkDescriptions: opts['check-descriptions'],
       ignoreGlobs: opts.ignore,
       schema: opts.schema,
