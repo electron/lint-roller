@@ -16,6 +16,10 @@ import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markd
 import { dynamicImport } from '../lib/helpers';
 import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
 
+// "<any char>: <match group>"
+const possibleStringRegex = /^[ \S]+?: *?(\S[ \S]+?)$/gm;
+const nonAlphaNumericDotRegex = /[^a-zA-Z0-9.]/g;
+
 interface ChangeSchema {
   'pr-url': string;
   'breaking-changes-header'?: string;
@@ -33,7 +37,7 @@ interface Options {
   checkPlacement: boolean;
   checkPullRequestLinks: boolean;
   breakingChangesFile: string;
-  checkDescriptions: boolean;
+  checkStrings: boolean;
   ignoreGlobs: string[];
   schema: string;
 }
@@ -83,7 +87,7 @@ async function main(
     checkPlacement,
     checkPullRequestLinks,
     breakingChangesFile,
-    checkDescriptions,
+    checkStrings,
     schema,
     ignoreGlobs = [],
   }: Options,
@@ -174,6 +178,40 @@ async function main(
         continue;
       }
 
+      // Special chars in YAML strings may break the parser if not surrounded by quotes,
+      //  including just causing the parser to read a value as null instead of throwing an error
+      //  <https://stackoverflow.com/questions/19109912/yaml-do-i-need-quotes-for-strings-in-yaml>
+      if (checkStrings) {
+        const possibleStrings = codeBlock.value.matchAll(possibleStringRegex)
+
+        for (const [ matchedLine, matchedGroup ] of possibleStrings) {
+          const trimmedMatchedGroup = matchedGroup.trim();
+          const isMatchedGroupInsideQuotes =
+            trimmedMatchedGroup.startsWith('"') && trimmedMatchedGroup.endsWith('"') ||
+            trimmedMatchedGroup.startsWith("'") && trimmedMatchedGroup.endsWith("'");
+
+          // Most special characters won't cause a problem if they're inside quotes
+          if (isMatchedGroupInsideQuotes) continue;
+
+          // I've only seen errors occur when the first or last character is a special character - @piotrpdev
+          const isFirstCharNonAlphaNumeric = trimmedMatchedGroup[0].match(nonAlphaNumericDotRegex) !== null;
+          const isLastCharNonAlphaNumeric = trimmedMatchedGroup.at(-1)?.match(nonAlphaNumericDotRegex) !== null;
+          if (isFirstCharNonAlphaNumeric || isLastCharNonAlphaNumeric) {
+            console.error(
+              `Warning parsing ${filepath}\n
+              Possible string value starts/ends with a non-alphanumeric character,\n
+              this might cause issues when parsing the YAML (might not throw an error):\n
+              ${matchedGroup}\n
+              ${matchedLine}\n
+              ${possibleHistoryBlock.value}`,
+            );
+            // Not throwing an error because it might be a false positive or desired behavior
+            // errorCounter++;
+            // continue;
+          }
+        }
+      }
+
       if (checkPlacement) {
         if (!possibleHistoryBlock.previousNode || possibleHistoryBlock.previousNode.type !== 'heading') {
           console.error(
@@ -253,6 +291,7 @@ async function main(
     // TODO: Replace user YAML with result of <https://eemeli.org/yaml/#tostring-options> for consistent style (but not in CI)
   }
 
+  // TODO: Add counter for warnings
   console.log(
     `Processed ${historyBlockCounter} API history block(s) in ${documentCounter} document(s) with ${errorCounter} error(s).`,
   );
@@ -281,14 +320,14 @@ function parseCommandLine() {
       'help',
       'check-placement',
       'check-pull-request-links',
-      'check-descriptions',
+      'check-strings',
     ],
     string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
     unknown: showUsage,
     default: {
       'check-placement': true,
       'check-pull-request-links': false,
-      'check-descriptions': false,
+      'check-strings': true,
     },
   });
 
@@ -343,7 +382,7 @@ async function init() {
       checkPlacement: opts['check-placement'],
       checkPullRequestLinks: opts['check-pull-request-links'],
       breakingChangesFile: opts['breaking-changes-file'],
-      checkDescriptions: opts['check-descriptions'],
+      checkStrings: opts['check-strings'],
       ignoreGlobs: opts.ignore,
       schema: opts.schema,
     });

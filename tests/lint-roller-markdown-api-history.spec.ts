@@ -127,6 +127,26 @@ describe('lint-roller-markdown-api-history', () => {
     expect(status).toEqual(1);
   });
 
+  it('should not run clean when there are string errors', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      MOCKUP_API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      MOCKUP_BREAKING_CHANGES_FILE,
+      'api-history-string-invalid.md',
+    );
+
+    expect(stderr).toMatch(/Possible string value starts\/ends with a non-alphanumeric character/);
+    expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
+
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(errors)).toEqual(1);
+    expect(status).toEqual(1);
+  });
+
   it('can ignore a glob', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
