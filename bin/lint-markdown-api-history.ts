@@ -46,7 +46,9 @@ interface HTMLWithPreviousNode extends HTML {
   previousNode?: Node;
 }
 
-export async function findPossibleApiHistoryBlocks(content: string): Promise<HTMLWithPreviousNode[]> {
+export async function findPossibleApiHistoryBlocks(
+  content: string,
+): Promise<HTMLWithPreviousNode[]> {
   const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
     fromMarkdown: typeof FromMarkdownFunction;
   };
@@ -125,18 +127,21 @@ async function main(
     try {
       const breakingChanges = await readFile(breakingChangesFile, { encoding: 'utf-8' });
       const markdownBreakingChanges = fromMarkdown(breakingChanges);
-      const headings = markdownBreakingChanges.children.filter(e => e.type === "heading" && e.depth === 3) as Heading[];
+      const headings = markdownBreakingChanges.children.filter(
+        (e) => e.type === 'heading' && e.depth === 3,
+      ) as Heading[];
       // Convert to GitHub heading ID format
-      breakingChangesFileHeadingIds = headings.map((heading) => 
-        heading.children
-          .reduce((acc, cur) => acc + 
+      breakingChangesFileHeadingIds = headings.map((heading) =>
+        heading.children.reduce(
+          (acc, cur) =>
+            acc +
             (cur as Literal<string>).value
               .toLowerCase()
-              .replace(/ /g, "-")
-              .replace(/[^a-zA-Z0-9-]/g, ""),
-            ""
-          )
-      )
+              .replace(/ /g, '-')
+              .replace(/[^a-zA-Z0-9-]/g, ''),
+          '',
+        ),
+      );
     } catch (error) {
       console.error(`Error reading breaking changes file:\n${error}`);
       return true;
@@ -182,20 +187,22 @@ async function main(
       //  including just causing the parser to read a value as null instead of throwing an error
       //  <https://stackoverflow.com/questions/19109912/yaml-do-i-need-quotes-for-strings-in-yaml>
       if (checkStrings) {
-        const possibleStrings = codeBlock.value.matchAll(possibleStringRegex)
+        const possibleStrings = codeBlock.value.matchAll(possibleStringRegex);
 
-        for (const [ matchedLine, matchedGroup ] of possibleStrings) {
+        for (const [matchedLine, matchedGroup] of possibleStrings) {
           const trimmedMatchedGroup = matchedGroup.trim();
           const isMatchedGroupInsideQuotes =
-            trimmedMatchedGroup.startsWith('"') && trimmedMatchedGroup.endsWith('"') ||
-            trimmedMatchedGroup.startsWith("'") && trimmedMatchedGroup.endsWith("'");
+            (trimmedMatchedGroup.startsWith('"') && trimmedMatchedGroup.endsWith('"')) ||
+            (trimmedMatchedGroup.startsWith("'") && trimmedMatchedGroup.endsWith("'"));
 
           // Most special characters won't cause a problem if they're inside quotes
           if (isMatchedGroupInsideQuotes) continue;
 
           // I've only seen errors occur when the first or last character is a special character - @piotrpdev
-          const isFirstCharNonAlphaNumeric = trimmedMatchedGroup[0].match(nonAlphaNumericDotRegex) !== null;
-          const isLastCharNonAlphaNumeric = trimmedMatchedGroup.at(-1)?.match(nonAlphaNumericDotRegex) !== null;
+          const isFirstCharNonAlphaNumeric =
+            trimmedMatchedGroup[0].match(nonAlphaNumericDotRegex) !== null;
+          const isLastCharNonAlphaNumeric =
+            trimmedMatchedGroup.at(-1)?.match(nonAlphaNumericDotRegex) !== null;
           if (isFirstCharNonAlphaNumeric || isLastCharNonAlphaNumeric) {
             console.error(
               `Warning parsing ${filepath}\n
@@ -213,7 +220,10 @@ async function main(
       }
 
       if (checkPlacement) {
-        if (!possibleHistoryBlock.previousNode || possibleHistoryBlock.previousNode.type !== 'heading') {
+        if (
+          !possibleHistoryBlock.previousNode ||
+          possibleHistoryBlock.previousNode.type !== 'heading'
+        ) {
           console.error(
             `Error parsing ${filepath}\n
             API history block must be preceded by a heading:\n
@@ -316,12 +326,7 @@ function parseCommandLine() {
   };
 
   const opts = minimist(process.argv.slice(2), {
-    boolean: [
-      'help',
-      'check-placement',
-      'check-pull-request-links',
-      'check-strings',
-    ],
+    boolean: ['help', 'check-placement', 'check-pull-request-links', 'check-strings'],
     string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
     unknown: showUsage,
     default: {
@@ -373,7 +378,9 @@ async function init() {
       try {
         await access(opts['breaking-changes-file'], constants.F_OK | constants.R_OK);
       } catch (error) {
-        console.error(`Error accessing breaking changes file: ${opts['breaking-changes-file']}\n${error}`);
+        console.error(
+          `Error accessing breaking changes file: ${opts['breaking-changes-file']}\n${error}`,
+        );
         process.exit(1);
       }
     }
