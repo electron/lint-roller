@@ -305,7 +305,7 @@ function parseCommandLine() {
       console.log(
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
           ' [-h|--help]' +
-          ' [--check-placement] [--check-pull-request-links] [--breaking-changes-file <path>] [--check-descriptions]' +
+          ' [--check-placement] [--check-pull-request-links] [--breaking-changes-file <path>] [--check-strings]' +
           ' [--schema <path>]' +
           ' [--ignore <globs>] [--ignore-path <path>]',
       );
