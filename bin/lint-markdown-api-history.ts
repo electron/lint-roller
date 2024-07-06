@@ -38,7 +38,11 @@ interface Options {
   schema: string;
 }
 
-export async function findPossibleApiHistoryBlocks(content: string): Promise<HTML[]> {
+interface HTMLWithPreviousNode extends HTML {
+  previousNode?: Node;
+}
+
+export async function findPossibleApiHistoryBlocks(content: string): Promise<HTMLWithPreviousNode[]> {
   const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
     fromMarkdown: typeof FromMarkdownFunction;
   };
@@ -46,7 +50,7 @@ export async function findPossibleApiHistoryBlocks(content: string): Promise<HTM
     visit: typeof VisitFunction;
   };
   const tree = fromMarkdown(content);
-  const codeBlocks: HTML[] = [];
+  const codeBlocks: HTMLWithPreviousNode[] = [];
 
   visit(
     tree,
@@ -57,8 +61,15 @@ export async function findPossibleApiHistoryBlocks(content: string): Promise<HTM
       (node as Literal<string>).value.toLowerCase().includes('```') &&
       (node as Literal<string>).value.toLowerCase().includes('yaml') &&
       (node as Literal<string>).value.toLowerCase().includes('history'),
-    (node: Node) => {
-      codeBlocks.push(node as HTML);
+    (node: Node, index) => {
+      // We don't want to modify the original node
+      // ? Maybe just copy the previous node's type instead of the whole node
+      const shallowNodeCopy = { ...node } as HTMLWithPreviousNode;
+      if (index !== null) {
+        const previousNode = tree.children[index - 1];
+        if (previousNode) shallowNodeCopy.previousNode = previousNode;
+      }
+      codeBlocks.push(shallowNodeCopy);
     },
   );
 
@@ -161,6 +172,18 @@ async function main(
         );
         errorCounter++;
         continue;
+      }
+
+      if (checkPlacement) {
+        if (!possibleHistoryBlock.previousNode || possibleHistoryBlock.previousNode.type !== 'heading') {
+          console.error(
+            `Error parsing ${filepath}\n
+            API history block must be preceded by a heading:\n
+            ${possibleHistoryBlock.value}`,
+          );
+          errorCounter++;
+          continue;
+        }
       }
 
       let unsafeHistory = null;

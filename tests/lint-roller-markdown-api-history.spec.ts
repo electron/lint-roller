@@ -108,6 +108,25 @@ describe('lint-roller-markdown-api-history', () => {
     expect(status).toEqual(1);
   });
 
+  it('should not run clean when there are placement errors', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      MOCKUP_API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      MOCKUP_BREAKING_CHANGES_FILE,
+      'api-history-placement-invalid.md',
+    );
+
+    expect(stderr).toMatch(/API history block must be preceded by a heading/);
+
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(errors)).toEqual(1);
+    expect(status).toEqual(1);
+  });
+
   it('can ignore a glob', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
