@@ -8,7 +8,7 @@ const MOCKUP_API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'mockup-api-history.sche
 const MOCKUP_BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'mockup-breaking-changes.md');
 
 const stdoutRegex =
-  /Processed (\d+) API history block\(s\) in (\d+) document\(s\) with (\d+) error\(s\)./;
+  /Processed (\d+) API history block\(s\) in (\d+) document\(s\) with (\d+) error\(s\) and (\d+) warning\(s\)./;
 
 function runLintMarkdownApiHistory(...args: string[]) {
   return spawnSync(
@@ -36,7 +36,7 @@ describe('lint-roller-markdown-api-history', () => {
 
     expect(stdout).toMatch(stdoutRegex);
 
-    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(errors)).toEqual(0);
     expect(status).toEqual(0);
@@ -57,7 +57,7 @@ describe('lint-roller-markdown-api-history', () => {
 
     expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
 
-    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
@@ -78,7 +78,7 @@ describe('lint-roller-markdown-api-history', () => {
 
     expect(stderr).toMatch(/"keyword": "minLength"/);
 
-    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
@@ -99,7 +99,7 @@ describe('lint-roller-markdown-api-history', () => {
 
     expect(stderr).toMatch(/did you use the correct format?/);
 
-    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
@@ -120,9 +120,9 @@ describe('lint-roller-markdown-api-history', () => {
       'api-history-heading-missing.md',
     );
 
-    expect(stderr).toMatch(/Couldn't find breaking changes header/);
+    expect(stderr).toMatch(/Couldn't find the following breaking changes header/);
 
-    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
@@ -145,7 +145,7 @@ describe('lint-roller-markdown-api-history', () => {
 
     expect(stderr).toMatch(/API history block must be preceded by a heading/);
 
-    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(errors)).toEqual(1);
     expect(status).toEqual(1);
@@ -169,9 +169,10 @@ describe('lint-roller-markdown-api-history', () => {
     expect(stderr).toMatch(/Possible string value starts\/ends with a non-alphanumeric character/);
     expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
 
-    const [, , errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [, , errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(errors)).toEqual(1);
+    expect(Number(warnings)).toEqual(1);
     expect(status).toEqual(1);
   });
 
@@ -192,11 +193,12 @@ describe('lint-roller-markdown-api-history', () => {
 
     expect(stderr).not.toMatch(/Couldn't find PR number/);
 
-    const [documents, blocks, errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [documents, blocks, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(blocks)).toEqual(1);
     expect(Number(documents)).toEqual(1);
     expect(Number(errors)).toEqual(0);
+    expect(Number(warnings)).toEqual(0);
     expect(status).toEqual(0);
   }
 
@@ -215,14 +217,16 @@ describe('lint-roller-markdown-api-history', () => {
       'api-history-pull-request-invalid.md',
     );
 
+    const [documents, blocks, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
+
     if (CI) {
-      expect(stdout).toMatch(/Detected CI PR number/);
+      expect(stdout).toMatch(/Detected PR number/);
       expect(stderr).not.toMatch(/Couldn't find PR number/);
+      expect(Number(warnings)).toEqual(0);
     } else {
       expect(stderr).toMatch(/Couldn't find PR number/);
+      expect(Number(warnings)).toEqual(1);
     }
-
-    const [documents, blocks, errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
 
     expect(Number(blocks)).toEqual(1);
     expect(Number(documents)).toEqual(1);
@@ -278,7 +282,7 @@ describe('lint-roller-markdown-api-history', () => {
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
-    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(blocks)).toEqual(1);
     expect(Number(documents)).toEqual(1);
@@ -302,7 +306,7 @@ describe('lint-roller-markdown-api-history', () => {
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
-    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(blocks)).toEqual(0);
     expect(Number(documents)).toEqual(0);
@@ -324,7 +328,7 @@ describe('lint-roller-markdown-api-history', () => {
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
-    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    const [blocks, documents] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(blocks)).toEqual(1);
     expect(Number(documents)).toEqual(1);
@@ -348,10 +352,12 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stdout).toMatch(stdoutRegex);
-    expect(stderr).toMatch(/Couldn't find breaking changes header/);
+    expect(stderr).toMatch(/Couldn't find the following breaking changes header/);
     expect(stderr).toMatch(/Couldn't find PR number/);
 
-    const [blocks, documents, errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+    console.log(stdout);
+
+    const [blocks, documents, errors] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(blocks)).toEqual(4);
     expect(Number(documents)).toEqual(4);
