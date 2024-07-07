@@ -15,6 +15,9 @@ import type { fromHtml as FromHtmlFunction } from 'hast-util-from-html';
 import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import { dynamicImport } from '../lib/helpers';
 import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
+import AdmZip = require('adm-zip');
+
+// TODO: Use consistent style for errors and warnings
 
 // "<any char>: <match group>"
 const possibleStringRegex = /^[ \S]+?: *?(\S[ \S]+?)$/gm;
@@ -32,7 +35,6 @@ interface ApiHistory {
   changes?: ChangeSchema[];
 }
 
-// TODO: Add option for CI to use to validate the PR that triggered the CI run
 interface Options {
   checkPlacement: boolean;
   checkPullRequestLinks: boolean;
@@ -44,6 +46,124 @@ interface Options {
 
 interface HTMLWithPreviousNode extends HTML {
   previousNode?: Node;
+}
+
+// If you change this, you might want to update the one in the website transformer
+export interface PrReleaseVersions {
+  release: string | null;
+  backports: Array<string>;
+}
+
+// If you change this, you might want to update the one in the website transformer
+export type PrReleaseVersionsContainer = { [key: number]: PrReleaseVersions };
+
+// If you change this, you might want to update the one in the website transformer
+interface PrReleaseArtifact {
+  data: PrReleaseVersionsContainer;
+  endCursor: string;
+}
+
+function getCIPrNumber(): number | null {
+  if (process.env.GITHUB_REF_NAME?.endsWith('/merge')) {
+    // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+    return Number(process.env.GITHUB_REF_NAME.split('/')[0]);
+  } else if (process.env.CIRCLE_PULL_REQUEST?.includes('/pull/')) {
+    // https://circleci.com/docs/variables/#built-in-environment-variables
+    return Number(process.env.CIRCLE_PULL_REQUEST.split('/').at(-1));
+  } else {
+    return null;
+  }
+}
+
+let _allPrReleaseVersions: PrReleaseVersionsContainer;
+
+// If you change this, you might want to update the one in the website transformer
+// TODO: Change this when GH_TOKEN isn't needed to fetch PR release versions anymore
+async function getAllPrReleaseVersions(): Promise<PrReleaseVersionsContainer> {
+  try {
+    if (_allPrReleaseVersions) {
+      return _allPrReleaseVersions;
+    }
+
+    if (process.env.NODE_ENV === 'test') {
+      const versions: PrReleaseVersionsContainer = {
+        22533: {
+          release: '',
+          backports: [] as string[],
+        },
+        26789: {
+          release: '',
+          backports: [] as string[],
+        },
+        37094: {
+          release: '',
+          backports: [] as string[],
+        },
+      };
+
+      _allPrReleaseVersions = versions;
+
+      const ciPrNumber = getCIPrNumber();
+      if (ciPrNumber) {
+        console.log(`Detected CI PR number '${ciPrNumber}', adding to list of PRs.`);
+        _allPrReleaseVersions[ciPrNumber] = {
+          release: '',
+          backports: [],
+        };
+      }
+
+      return _allPrReleaseVersions;
+    }
+
+    if (!process.env.GH_TOKEN) {
+      throw new Error(
+        `Error while checking PR links: GH_TOKEN is required for fetching PR release versions.`,
+      );
+    }
+
+    const fetchOptions = {
+      method: 'GET',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        Authorization: `Bearer ${process.env.GH_TOKEN}`,
+      },
+    };
+
+    const artifactsListResponse = await fetch(
+      'https://api.github.com/repos/electron/website/actions/artifacts',
+      fetchOptions,
+    );
+    const latestArtifact = (await artifactsListResponse.json()).artifacts
+      .filter(({ name }: { name: string }) => name === 'resolved-pr-versions')
+      .sort((a: { id: number }, b: { id: number }) => a.id > b.id)[0];
+
+    const archiveDownloadResponse = await fetch(latestArtifact.archive_download_url, fetchOptions);
+    const buffer = Buffer.from(await archiveDownloadResponse.arrayBuffer());
+
+    const zip = new AdmZip(buffer);
+    const parsedData = JSON.parse(zip.readAsText(zip.getEntries()[0]!)) as PrReleaseArtifact;
+
+    if (!parsedData?.data) {
+      throw new Error(`No data found in the PR release versions artifact.`);
+    }
+
+    _allPrReleaseVersions = parsedData.data;
+
+    const ciPrNumber = getCIPrNumber();
+    if (ciPrNumber) {
+      console.log(`Detected CI PR number '${ciPrNumber}', adding to list of PRs.`);
+      _allPrReleaseVersions[ciPrNumber] = {
+        release: '',
+        backports: [],
+      };
+    }
+
+    return _allPrReleaseVersions;
+  } catch (error) {
+    console.error(`Error while checking PR links:\n${error}`);
+    process.exit(1);
+  }
 }
 
 export async function findPossibleApiHistoryBlocks(
@@ -204,7 +324,7 @@ async function main(
           const isLastCharNonAlphaNumeric =
             trimmedMatchedGroup.at(-1)?.match(nonAlphaNumericDotRegex) !== null;
           if (isFirstCharNonAlphaNumeric || isLastCharNonAlphaNumeric) {
-            console.error(
+            console.warn(
               `Warning parsing ${filepath}\n
               Possible string value starts/ends with a non-alphanumeric character,\n
               this might cause issues when parsing the YAML (might not throw an error):\n
@@ -295,6 +415,39 @@ async function main(
         }
       }
 
+      if (checkPullRequestLinks) {
+        const allPrReleaseVersions = await getAllPrReleaseVersions();
+
+        const safeHistory = unsafeHistory as ApiHistory;
+        const prsInHistory: Array<string> = [];
+
+        // Copied from <https://github.com/electron/website/blob/a5d30f1ede6b20ea00d487c198c71560745063ab/src/transformers/api-history.ts#L154-L174>
+        safeHistory.added?.forEach((added) => {
+          prsInHistory.push(added['pr-url'].split('/').at(-1)!);
+        });
+
+        safeHistory.changes?.forEach((change) => {
+          prsInHistory.push(change['pr-url'].split('/').at(-1)!);
+        });
+
+        safeHistory.deprecated?.forEach((deprecated) => {
+          prsInHistory.push(deprecated['pr-url'].split('/').at(-1)!);
+        });
+
+        for (const prNumber of prsInHistory) {
+          if (!allPrReleaseVersions.hasOwnProperty(Number(prNumber))) {
+            // ? Should this be an error or warning?
+            console.warn(
+              `Warning parsing ${filepath}\n
+              Couldn't find PR number '${prNumber}' in list of all PRs included in releases.\n
+              Maybe the list is stale? Are you documenting a new change?\n
+              ${JSON.stringify(safeHistory, null, 4)}`,
+            );
+            // errorCounter++;
+          }
+        }
+      }
+
       // ? Maybe collect all api history and export it to a single file for future use.
     }
 
@@ -331,6 +484,7 @@ function parseCommandLine() {
     unknown: showUsage,
     default: {
       'check-placement': true,
+      // TODO: Change this when GH_TOKEN isn't needed to fetch PR release versions anymore
       'check-pull-request-links': false,
       'check-strings': true,
     },
@@ -381,6 +535,14 @@ async function init() {
         console.error(
           `Error accessing breaking changes file: ${opts['breaking-changes-file']}\n${error}`,
         );
+        process.exit(1);
+      }
+    }
+
+    if (opts['check-pull-request-links'] && process.env.NODE_ENV !== 'test') {
+      // TODO: Change this when GH_TOKEN isn't needed to fetch PR release versions anymore
+      if (!process.env.GH_TOKEN) {
+        console.error('GH_TOKEN environment variable is required for checking pull request links.');
         process.exit(1);
       }
     }

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
 const MOCKUP_API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'mockup-api-history.schema.json');
@@ -18,6 +18,8 @@ function runLintMarkdownApiHistory(...args: string[]) {
   );
 }
 
+// TODO: Explicitly set default flags since they might not be default in the future.
+
 describe('lint-roller-markdown-api-history', () => {
   it('should run clean when there are no errors', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
@@ -27,6 +29,8 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--breaking-changes-file',
       MOCKUP_BREAKING_CHANGES_FILE,
+      '--check-pull-request-links',
+      'false',
       'api-history-valid.md',
     );
 
@@ -44,6 +48,8 @@ describe('lint-roller-markdown-api-history', () => {
       FIXTURES_DIR,
       '--schema',
       MOCKUP_API_HISTORY_SCHEMA,
+      '--check-pull-request-links',
+      'false',
       'api-history-yaml-invalid.md',
     );
 
@@ -61,6 +67,8 @@ describe('lint-roller-markdown-api-history', () => {
       FIXTURES_DIR,
       '--schema',
       MOCKUP_API_HISTORY_SCHEMA,
+      '--check-pull-request-links',
+      'false',
       'api-history-schema-invalid.md',
     );
 
@@ -78,6 +86,8 @@ describe('lint-roller-markdown-api-history', () => {
       FIXTURES_DIR,
       '--schema',
       MOCKUP_API_HISTORY_SCHEMA,
+      '--check-pull-request-links',
+      'false',
       'api-history-format-invalid.md',
     );
 
@@ -97,6 +107,8 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--breaking-changes-file',
       MOCKUP_BREAKING_CHANGES_FILE,
+      '--check-pull-request-links',
+      'false',
       'api-history-heading-missing.md',
     );
 
@@ -116,6 +128,8 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--breaking-changes-file',
       MOCKUP_BREAKING_CHANGES_FILE,
+      '--check-pull-request-links',
+      'false',
       'api-history-placement-invalid.md',
     );
 
@@ -135,6 +149,8 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--breaking-changes-file',
       MOCKUP_BREAKING_CHANGES_FILE,
+      '--check-pull-request-links',
+      'false',
       'api-history-string-invalid.md',
     );
 
@@ -147,6 +163,90 @@ describe('lint-roller-markdown-api-history', () => {
     expect(status).toEqual(1);
   });
 
+  function cleanPullRequestLinksTest() {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      MOCKUP_API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      MOCKUP_BREAKING_CHANGES_FILE,
+      '--check-pull-request-links',
+      'true',
+      'api-history-valid.md',
+    );
+
+    expect(stderr).not.toMatch(/Couldn't find PR number/);
+
+    const [documents, blocks, errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(blocks)).toEqual(1);
+    expect(Number(documents)).toEqual(1);
+    expect(Number(errors)).toEqual(0);
+    expect(status).toEqual(0);
+  }
+
+  function dirtyPullRequestLinksTest(CI = false) {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      MOCKUP_API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      MOCKUP_BREAKING_CHANGES_FILE,
+      '--check-pull-request-links',
+      'true',
+      'api-history-pull-request-invalid.md',
+    );
+
+    if (CI) {
+      expect(stdout).toMatch(/Detected CI PR number/);
+      expect(stderr).not.toMatch(/Couldn't find PR number/);
+    } else {
+      expect(stderr).toMatch(/Couldn't find PR number/);
+    }
+
+    const [documents, blocks, errors] = stdoutRegex.exec(stdout)?.slice(1, 4) ?? [];
+
+    expect(Number(blocks)).toEqual(1);
+    expect(Number(documents)).toEqual(1);
+    expect(Number(errors)).toEqual(0);
+    expect(status).toEqual(0);
+  }
+
+  it.runIf(process.env.GH_TOKEN)(
+    'should not run clean when there are pull request link errors (GH_TOKEN)',
+    () => {
+      dirtyPullRequestLinksTest();
+    },
+  );
+
+  it.runIf(process.env.GH_TOKEN)(
+    'should run clean when there are no pull request link errors (GH_TOKEN)',
+    () => {
+      cleanPullRequestLinksTest();
+    },
+  );
+
+  it('should not run clean when there are pull request link errors (mock data)', () => {
+    vi.stubEnv('NODE_ENV', 'test');
+    dirtyPullRequestLinksTest();
+    vi.unstubAllEnvs();
+  });
+
+  it('should run clean when there are no pull request link errors (mock data)', () => {
+    vi.stubEnv('NODE_ENV', 'test');
+    cleanPullRequestLinksTest();
+    vi.unstubAllEnvs();
+  });
+
+  it('should run clean when pull request link is in CI env vars (mock data)', () => {
+    vi.stubEnv('NODE_ENV', 'test');
+    vi.stubEnv('CIRCLE_PULL_REQUEST', 'https://github.com/electron/lint-roller/pull/225332672');
+    dirtyPullRequestLinksTest(true);
+    vi.unstubAllEnvs();
+  });
+
   it('can ignore a glob', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
@@ -155,6 +255,8 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--ignore',
       '**/api-history-yaml-invalid.md',
+      '--check-pull-request-links',
+      'false',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -175,6 +277,8 @@ describe('lint-roller-markdown-api-history', () => {
       '**/api-history-valid.md',
       '--ignore',
       '**/api-history-yaml-invalid.md',
+      '--check-pull-request-links',
+      'false',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -193,6 +297,8 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--ignore-path',
       resolve(FIXTURES_DIR, 'ignorepaths'),
+      '--check-pull-request-links',
+      'false',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -209,6 +315,8 @@ describe('lint-roller-markdown-api-history', () => {
       FIXTURES_DIR,
       '--schema',
       MOCKUP_API_HISTORY_SCHEMA,
+      '--check-pull-request-links',
+      'false',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
