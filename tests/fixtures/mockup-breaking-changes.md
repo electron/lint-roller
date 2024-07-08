@@ -18,3 +18,11 @@ win.setTrafficLightPosition({ x: 0, y: 0 })
 win.setWindowButtonPosition({ x: 10, y: 10 })
 win.setWindowButtonPosition(null)
 ```
+
+### Deprecated: Mockup Number 1
+
+mockup text 1
+
+### Deprecated: Mockup Number 2
+
+mockup text 2

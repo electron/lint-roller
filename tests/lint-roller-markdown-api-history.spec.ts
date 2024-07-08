@@ -1,11 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import path, { resolve } from 'node:path';
+import { readdir, unlink, writeFile } from 'node:fs/promises';
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
 const MOCKUP_API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'mockup-api-history.schema.json');
 const MOCKUP_BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'mockup-breaking-changes.md');
+const MOCKUP_DOCS_API_FOLDER = resolve(FIXTURES_DIR, 'api-history/mockup-api');
 
 const stdoutRegex =
   /Processed (\d+) API history block\(s\) in (\d+) document\(s\) with (\d+) error\(s\) and (\d+) warning\(s\)./;
@@ -18,7 +20,130 @@ function runLintMarkdownApiHistory(...args: string[]) {
   );
 }
 
+async function clearMockupApiFolder() {
+  for (const file of await readdir(MOCKUP_DOCS_API_FOLDER)) {
+    if (file === '.gitkeep') continue;
+    await unlink(path.join(MOCKUP_DOCS_API_FOLDER, file));
+  }
+}
+
+type GenerateRandomApiDocumentsResult = {
+  generatedDocumentCount: number;
+  generatedBlockCount: number;
+  generatedErrorCount: number;
+  generatedWarningCount: number;
+};
+
+// Have to do this because beforeAll doesn't have a context
+let _generateRandomApiDocumentsResult: GenerateRandomApiDocumentsResult | null = null;
+
+async function generateRandomApiDocuments(): Promise<GenerateRandomApiDocumentsResult> {
+  const maxDocuments = 100;
+  const maxBlocksPerDocument = 20;
+  const changeOfStringError = 0.5;
+  const changeOfHeadingError = 0.5;
+  const testPrNumbers = ['22533', '26789', '37094'];
+  const testHeadingIds = [
+    'deprecated-browserwindowsettrafficlightpositionposition',
+    'deprecated-mockup-number-1',
+    'deprecated-mockup-number-2',
+  ];
+
+  if (_generateRandomApiDocumentsResult) {
+    return _generateRandomApiDocumentsResult;
+  }
+
+  function generateRandomPrUrl() {
+    const randomPrNumber = testPrNumbers[Math.floor(Math.random() * testPrNumbers.length)];
+    return `https://github.com/electron/electron/pull/${randomPrNumber}`;
+  }
+
+  function generateRandomBreakingHeadingId() {
+    return testHeadingIds[Math.floor(Math.random() * testHeadingIds.length)];
+  }
+
+  function randomlyGenerateStringWarnChar() {
+    const isError = Math.random() < changeOfStringError;
+
+    if (isError) {
+      // Will cause a warning but not a yaml parse error
+      return { isError, stringWarnChar: '$' };
+    } else {
+      return { isError, stringWarnChar: '' };
+    }
+  }
+
+  function randomlyGenerateHeading(blockIdx: number) {
+    const isError = Math.random() < changeOfHeadingError;
+
+    if (isError) {
+      return { isError, heading: '' };
+    } else {
+      return { isError, heading: `#### API History Block ${blockIdx}` };
+    }
+  }
+
+  let generatedDocumentCount = Math.floor(Math.random() * maxDocuments) || 1;
+  let generatedBlockCount = 0;
+  let generatedErrorCount = 0;
+  let generatedWarningCount = 0;
+
+  for (let documentIdx = 0; documentIdx < generatedDocumentCount; documentIdx++) {
+    const blocks = Math.floor(Math.random() * maxBlocksPerDocument) || 1;
+    generatedBlockCount += blocks;
+
+    let content = '';
+
+    for (let blockIdx = 0; blockIdx < blocks; blockIdx++) {
+      // No point in generating every type of error and warning since the other tests already
+      //  cover that and in a real use case we wouldn't have that many errors and warnings in
+      //  every document. This is just to test the performance of the linter.
+      const { isError: IsStringWarn, stringWarnChar } = randomlyGenerateStringWarnChar();
+      if (IsStringWarn) generatedWarningCount++;
+
+      const { isError: IsHeadingError, heading } = randomlyGenerateHeading(blockIdx);
+      if (IsHeadingError) generatedErrorCount++;
+
+      content +=
+        `${heading}\n\n` +
+        '<!--\n' +
+        '```YAML history\n' +
+        'added:\n' +
+        `  - pr-url: ${generateRandomPrUrl()}\n` +
+        'changes:\n' +
+        `  - pr-url: ${generateRandomPrUrl()}\n` +
+        `    description: ${stringWarnChar}Made \`trafficLightPosition\` work for \`customButtonOnHover\`.\n` +
+        'deprecated:\n' +
+        `  - pr-url: ${generateRandomPrUrl()}\n` +
+        `    breaking-changes-header: ${generateRandomBreakingHeadingId()}\n` +
+        '```\n' +
+        '-->\n\n' +
+        'Set a custom position for the traffic light buttons in frameless window.\n' +
+        'Passing `{ x: 0, y: 0 }` will reset the position to default.\n\n';
+    }
+
+    await writeFile(resolve(MOCKUP_DOCS_API_FOLDER, `${documentIdx}.md`), content);
+  }
+
+  _generateRandomApiDocumentsResult = {
+    generatedDocumentCount,
+    generatedBlockCount,
+    generatedErrorCount,
+    generatedWarningCount,
+  };
+  return _generateRandomApiDocumentsResult;
+}
+
 describe('lint-roller-markdown-api-history', () => {
+  beforeAll(async () => {
+    await clearMockupApiFolder();
+    await generateRandomApiDocuments();
+  });
+
+  afterAll(async () => {
+    await clearMockupApiFolder();
+  });
+
   it('should run clean when there are no errors', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
@@ -390,6 +515,40 @@ describe('lint-roller-markdown-api-history', () => {
     expect(Number(errors)).toEqual(2);
     expect(Number(warnings)).toEqual(1);
     expect(status).toEqual(1);
+
+    vi.unstubAllEnvs();
+  });
+
+  it('should lint a large amount of api history', async () => {
+    vi.stubEnv('NODE_ENV', 'test');
+
+    const {
+      generatedDocumentCount,
+      generatedBlockCount,
+      generatedErrorCount,
+      generatedWarningCount,
+    } = await generateRandomApiDocuments();
+
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      MOCKUP_DOCS_API_FOLDER,
+      '--schema',
+      MOCKUP_API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      MOCKUP_BREAKING_CHANGES_FILE,
+      '--check-placement',
+      '--check-strings',
+      '--check-pull-request-links',
+      '*.md',
+    );
+
+    const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
+
+    expect(Number(blocks)).toEqual(generatedBlockCount);
+    expect(Number(documents)).toEqual(generatedDocumentCount);
+    expect(Number(errors)).toEqual(generatedErrorCount);
+    expect(Number(warnings)).toEqual(generatedWarningCount);
+    expect(status).toEqual(generatedErrorCount > 0 ? 1 : 0);
 
     vi.unstubAllEnvs();
   });
