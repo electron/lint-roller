@@ -91,13 +91,7 @@ type LintingResults = {
 async function main(
   workspaceRoot: string,
   globs: string[],
-  {
-    checkPlacement,
-    breakingChangesFile,
-    checkStrings,
-    schema,
-    ignoreGlobs = [],
-  }: Options,
+  { checkPlacement, breakingChangesFile, checkStrings, schema, ignoreGlobs = [] }: Options,
 ): Promise<LintingResults> {
   let documentCounter = 0;
   let historyBlockCounter = 0;
