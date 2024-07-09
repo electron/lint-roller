@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import path, { resolve } from 'node:path';
 import { readdir, unlink, writeFile } from 'node:fs/promises';
 
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
 const MOCKUP_API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'mockup-api-history.schema.json');
@@ -154,8 +154,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       'api-history-valid.md',
     );
 
@@ -178,8 +176,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       'api-history-yaml-invalid.md',
     );
 
@@ -202,8 +198,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       'api-history-schema-invalid.md',
     );
 
@@ -226,8 +220,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       'api-history-format-invalid.md',
     );
 
@@ -252,8 +244,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       'api-history-heading-missing.md',
     );
 
@@ -278,8 +268,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       'api-history-placement-invalid.md',
     );
 
@@ -304,8 +292,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       'api-history-string-invalid.md',
     );
 
@@ -321,97 +307,6 @@ describe('lint-roller-markdown-api-history', () => {
     expect(status).toEqual(1);
   });
 
-  function cleanPullRequestLinksTest() {
-    const { status, stdout, stderr } = runLintMarkdownApiHistory(
-      '--root',
-      FIXTURES_DIR,
-      '--schema',
-      MOCKUP_API_HISTORY_SCHEMA,
-      '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
-      '--check-placement',
-      '--check-strings',
-      '--check-pull-request-links',
-      'true',
-      'api-history-valid.md',
-    );
-
-    expect(stderr).not.toMatch(/Couldn't find PR number/);
-
-    const [documents, blocks, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
-
-    expect(Number(blocks)).toEqual(1);
-    expect(Number(documents)).toEqual(1);
-    expect(Number(errors)).toEqual(0);
-    expect(Number(warnings)).toEqual(0);
-    expect(status).toEqual(0);
-  }
-
-  function dirtyPullRequestLinksTest(CI = false) {
-    const { status, stdout, stderr } = runLintMarkdownApiHistory(
-      '--root',
-      FIXTURES_DIR,
-      '--schema',
-      MOCKUP_API_HISTORY_SCHEMA,
-      '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
-      '--check-placement',
-      '--check-strings',
-      '--check-pull-request-links',
-      'true',
-      'api-history-pull-request-invalid.md',
-    );
-
-    const [documents, blocks, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
-
-    if (CI) {
-      expect(stdout).toMatch(/Detected PR number/);
-      expect(stderr).not.toMatch(/Couldn't find PR number/);
-      expect(Number(warnings)).toEqual(0);
-    } else {
-      expect(stderr).toMatch(/Couldn't find PR number/);
-      expect(Number(warnings)).toEqual(1);
-    }
-
-    expect(Number(blocks)).toEqual(1);
-    expect(Number(documents)).toEqual(1);
-    expect(Number(errors)).toEqual(0);
-    expect(status).toEqual(0);
-  }
-
-  it.runIf(process.env.GH_TOKEN)(
-    'should not run clean when there are pull request link errors (GH_TOKEN)',
-    () => {
-      dirtyPullRequestLinksTest();
-    },
-  );
-
-  it.runIf(process.env.GH_TOKEN)(
-    'should run clean when there are no pull request link errors (GH_TOKEN)',
-    () => {
-      cleanPullRequestLinksTest();
-    },
-  );
-
-  it('should not run clean when there are pull request link errors (mock data)', () => {
-    vi.stubEnv('NODE_ENV', 'test');
-    dirtyPullRequestLinksTest();
-    vi.unstubAllEnvs();
-  });
-
-  it('should run clean when there are no pull request link errors (mock data)', () => {
-    vi.stubEnv('NODE_ENV', 'test');
-    cleanPullRequestLinksTest();
-    vi.unstubAllEnvs();
-  });
-
-  it('should run clean when pull request link is in CI env vars (mock data)', () => {
-    vi.stubEnv('NODE_ENV', 'test');
-    vi.stubEnv('CIRCLE_PULL_REQUEST', 'https://github.com/electron/lint-roller/pull/225332672');
-    dirtyPullRequestLinksTest(true);
-    vi.unstubAllEnvs();
-  });
-
   it('can ignore a glob', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
@@ -422,8 +317,6 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-strings',
       '--ignore',
       '**/api-history-yaml-invalid.md',
-      '--check-pull-request-links',
-      'false',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -448,8 +341,6 @@ describe('lint-roller-markdown-api-history', () => {
       '**/api-history-valid.md',
       '--ignore',
       '**/api-history-yaml-invalid.md',
-      '--check-pull-request-links',
-      'false',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -472,8 +363,6 @@ describe('lint-roller-markdown-api-history', () => {
       resolve(FIXTURES_DIR, 'ignorepaths'),
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      'false',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -487,8 +376,6 @@ describe('lint-roller-markdown-api-history', () => {
   });
 
   it('should lint api history', () => {
-    vi.stubEnv('NODE_ENV', 'test');
-
     const { status, stdout, stderr } = runLintMarkdownApiHistory(
       '--root',
       FIXTURES_DIR,
@@ -498,30 +385,24 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
-      '{api-history-valid,api-history-yaml-invalid,api-history-heading-missing,api-history-pull-request-invalid}.md',
+      '{api-history-valid,api-history-yaml-invalid,api-history-heading-missing}.md',
     );
 
     expect(stdout).toMatch(stdoutRegex);
     expect(stderr).toMatch(/Couldn't find the following breaking changes header/);
-    expect(stderr).toMatch(/Couldn't find PR number/);
 
     console.log(stdout);
 
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
-    expect(Number(blocks)).toEqual(4);
-    expect(Number(documents)).toEqual(4);
+    expect(Number(blocks)).toEqual(3);
+    expect(Number(documents)).toEqual(3);
     expect(Number(errors)).toEqual(2);
-    expect(Number(warnings)).toEqual(1);
+    expect(Number(warnings)).toEqual(0);
     expect(status).toEqual(1);
-
-    vi.unstubAllEnvs();
   });
 
   it('should lint a large amount of api history', async () => {
-    vi.stubEnv('NODE_ENV', 'test');
-
     const {
       generatedDocumentCount,
       generatedBlockCount,
@@ -538,7 +419,6 @@ describe('lint-roller-markdown-api-history', () => {
       MOCKUP_BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
-      '--check-pull-request-links',
       '*.md',
     );
 
@@ -549,7 +429,5 @@ describe('lint-roller-markdown-api-history', () => {
     expect(Number(errors)).toEqual(generatedErrorCount);
     expect(Number(warnings)).toEqual(generatedWarningCount);
     expect(status).toEqual(generatedErrorCount > 0 ? 1 : 0);
-
-    vi.unstubAllEnvs();
   });
 });

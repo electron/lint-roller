@@ -47,7 +47,6 @@
   "homepage": "https://github.com/electron/lint-roller#readme",
   "devDependencies": {
     "@electron-internal/eslint-config": "^1.0.1",
-    "@types/adm-zip": "^0.5.5",
     "@types/balanced-match": "^1.0.3",
     "@types/glob": "^8.1.0",
     "@types/markdown-it": "^13.0.6",
@@ -63,7 +62,6 @@
   },
   "dependencies": {
     "@dsanders11/vscode-markdown-languageservice": "^0.3.0",
-    "adm-zip": "^0.5.14",
     "ajv": "^8.16.0",
     "balanced-match": "^2.0.0",
     "glob": "^8.1.0",

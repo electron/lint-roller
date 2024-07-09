@@ -15,7 +15,6 @@ import type { fromHtml as FromHtmlFunction } from 'hast-util-from-html';
 import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import { dynamicImport } from '../lib/helpers';
 import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
-import AdmZip = require('adm-zip');
 
 // "<any char>: <match group>"
 const possibleStringRegex = /^[ \S]+?: *?(\S[ \S]+?)$/gm;
@@ -35,7 +34,8 @@ interface ApiHistory {
 
 interface Options {
   checkPlacement: boolean;
-  checkPullRequestLinks: boolean;
+  // TODO: Implement this when GH_TOKEN isn't needed to fetch PR release versions anymore
+  // checkPullRequestLinks: boolean;
   breakingChangesFile: string;
   checkStrings: boolean;
   ignoreGlobs: string[];
@@ -44,130 +44,6 @@ interface Options {
 
 interface HTMLWithPreviousNode extends HTML {
   previousNode?: Node;
-}
-
-// If you change this, you might want to update the one in the website transformer
-export interface PrReleaseVersions {
-  release: string | null;
-  backports: Array<string>;
-}
-
-// If you change this, you might want to update the one in the website transformer
-export type PrReleaseVersionsContainer = { [key: number]: PrReleaseVersions };
-
-// If you change this, you might want to update the one in the website transformer
-interface PrReleaseArtifact {
-  data: PrReleaseVersionsContainer;
-  endCursor: string;
-}
-
-function getCIPrNumber(): number | null {
-  if (process.env.GITHUB_REF_NAME?.endsWith('/merge')) {
-    // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-    return Number(process.env.GITHUB_REF_NAME.split('/')[0]);
-  } else if (process.env.CIRCLE_PULL_REQUEST?.includes('/pull/')) {
-    // https://circleci.com/docs/variables/#built-in-environment-variables
-    return Number(process.env.CIRCLE_PULL_REQUEST.split('/').at(-1));
-  } else {
-    return null;
-  }
-}
-
-let _allPrReleaseVersions: PrReleaseVersionsContainer;
-
-// If you change this, you might want to update the one in the website transformer
-// TODO: Change this when GH_TOKEN isn't needed to fetch PR release versions anymore
-async function getAllPrReleaseVersions(): Promise<PrReleaseVersionsContainer> {
-  try {
-    if (_allPrReleaseVersions) {
-      return _allPrReleaseVersions;
-    }
-
-    if (process.env.NODE_ENV === 'test') {
-      const versions: PrReleaseVersionsContainer = {
-        22533: {
-          release: '',
-          backports: [] as string[],
-        },
-        26789: {
-          release: '',
-          backports: [] as string[],
-        },
-        37094: {
-          release: '',
-          backports: [] as string[],
-        },
-      };
-
-      _allPrReleaseVersions = versions;
-
-      const ciPrNumber = getCIPrNumber();
-      if (ciPrNumber) {
-        console.log(
-          'Detected PR number:\n\n' +
-            `'${ciPrNumber}'\n\n` +
-            'using CI environment variables. Adding to list of PRs...\n',
-        );
-        _allPrReleaseVersions[ciPrNumber] = {
-          release: '',
-          backports: [],
-        };
-      }
-
-      return _allPrReleaseVersions;
-    }
-
-    if (!process.env.GH_TOKEN) {
-      throw new Error(`GH_TOKEN is required for fetching PR release versions.`);
-    }
-
-    const fetchOptions = {
-      method: 'GET',
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        Authorization: `Bearer ${process.env.GH_TOKEN}`,
-      },
-    };
-
-    const artifactsListResponse = await fetch(
-      'https://api.github.com/repos/electron/website/actions/artifacts',
-      fetchOptions,
-    );
-    const latestArtifact = (await artifactsListResponse.json()).artifacts
-      .filter(({ name }: { name: string }) => name === 'resolved-pr-versions')
-      .sort((a: { id: number }, b: { id: number }) => a.id > b.id)[0];
-
-    const archiveDownloadResponse = await fetch(latestArtifact.archive_download_url, fetchOptions);
-    const buffer = Buffer.from(await archiveDownloadResponse.arrayBuffer());
-
-    const zip = new AdmZip(buffer);
-    const parsedData = JSON.parse(zip.readAsText(zip.getEntries()[0]!)) as PrReleaseArtifact;
-
-    if (!parsedData?.data) {
-      throw new Error(`No data found in the PR release versions artifact.`);
-    }
-
-    _allPrReleaseVersions = parsedData.data;
-
-    const ciPrNumber = getCIPrNumber();
-    if (ciPrNumber) {
-      console.log(
-        'Detected PR number:\n\n' +
-          `'${ciPrNumber}'\n\n` +
-          'using CI environment variables. Adding to list of PRs...\n',
-      );
-      _allPrReleaseVersions[ciPrNumber] = {
-        release: '',
-        backports: [],
-      };
-    }
-
-    return _allPrReleaseVersions;
-  } catch (error) {
-    console.error(`Error occurred while checking PR links:\n${error}\n`);
-    process.exit(1);
-  }
 }
 
 export async function findPossibleApiHistoryBlocks(
@@ -217,7 +93,6 @@ async function main(
   globs: string[],
   {
     checkPlacement,
-    checkPullRequestLinks,
     breakingChangesFile,
     checkStrings,
     schema,
@@ -446,45 +321,6 @@ async function main(
           }
         }
 
-        if (checkPullRequestLinks) {
-          const allPrReleaseVersions = await getAllPrReleaseVersions();
-
-          const safeHistory = unsafeHistory as ApiHistory;
-          const prsInHistory: Array<string> = [];
-
-          // Copied from <https://github.com/electron/website/blob/a5d30f1ede6b20ea00d487c198c71560745063ab/src/transformers/api-history.ts#L154-L174>
-          safeHistory.added?.forEach((added) => {
-            prsInHistory.push(added['pr-url'].split('/').at(-1)!);
-          });
-
-          safeHistory.changes?.forEach((change) => {
-            prsInHistory.push(change['pr-url'].split('/').at(-1)!);
-          });
-
-          safeHistory.deprecated?.forEach((deprecated) => {
-            prsInHistory.push(deprecated['pr-url'].split('/').at(-1)!);
-          });
-
-          for (const prNumber of prsInHistory) {
-            if (!allPrReleaseVersions.hasOwnProperty(Number(prNumber))) {
-              // ? Should this be an error or warning?
-              console.warn(
-                'Warning occurred while parsing Markdown document:\n\n' +
-                  `'${filepath}'\n\n` +
-                  `Couldn't find PR number:\n\n` +
-                  `'${prNumber}'\n\n` +
-                  'in list of all PRs included in releases.\n\n' +
-                  `Maybe the list is stale? Are you documenting a new change?\n\n` +
-                  'Parsed YAML:\n\n' +
-                  `${JSON.stringify(safeHistory, null, 4)}\n\n` +
-                  'API history block:\n\n' +
-                  `${possibleHistoryBlock.value}\n\n`,
-              );
-              warningCounter++;
-            }
-          }
-        }
-
         // ? Maybe collect all api history and export it to a single file for future use.
       }
 
@@ -504,7 +340,7 @@ function parseCommandLine() {
       console.log(
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
           ' [-h|--help]' +
-          ' [--check-placement] [--check-pull-request-links] [--breaking-changes-file <path>] [--check-strings]' +
+          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings]' +
           ' [--schema <path>]' +
           ' [--ignore <globs>] [--ignore-path <path>]',
       );
@@ -515,13 +351,11 @@ function parseCommandLine() {
   };
 
   const opts = minimist(process.argv.slice(2), {
-    boolean: ['help', 'check-placement', 'check-pull-request-links', 'check-strings'],
+    boolean: ['help', 'check-placement', 'check-strings'],
     string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
     unknown: showUsage,
     default: {
       'check-placement': true,
-      // TODO: Change this when GH_TOKEN isn't needed to fetch PR release versions anymore
-      'check-pull-request-links': false,
       'check-strings': true,
     },
   });
@@ -575,21 +409,11 @@ async function init() {
       }
     }
 
-    if (opts['check-pull-request-links'] && process.env.NODE_ENV !== 'test') {
-      // TODO: Change this when GH_TOKEN isn't needed to fetch PR release versions anymore
-      if (!process.env.GH_TOKEN) {
-        throw new Error(
-          'GH_TOKEN environment variable is required for checking pull request links.',
-        );
-      }
-    }
-
     const { historyBlockCounter, documentCounter, errorCounter, warningCounter } = await main(
       resolve(process.cwd(), opts.root),
       opts._,
       {
         checkPlacement: opts['check-placement'],
-        checkPullRequestLinks: opts['check-pull-request-links'],
         breakingChangesFile: opts['breaking-changes-file'],
         checkStrings: opts['check-strings'],
         ignoreGlobs: opts.ignore,
