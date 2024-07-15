@@ -391,8 +391,6 @@ describe('lint-roller-markdown-api-history', () => {
     expect(stdout).toMatch(stdoutRegex);
     expect(stderr).toMatch(/Couldn't find the following breaking changes header/);
 
-    console.log(stdout);
-
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
     expect(Number(blocks)).toEqual(3);
