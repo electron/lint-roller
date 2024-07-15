@@ -175,7 +175,7 @@ async function main(
         if (
           codeBlock.type !== 'code' ||
           codeBlock.lang?.toLowerCase() !== 'yaml' ||
-          codeBlock.meta?.trim() !== 'history'
+          codeBlock.meta?.trim().toLowerCase() !== 'history'
         ) {
           console.error(
             'Error occurred while parsing Markdown document:\n\n' +
