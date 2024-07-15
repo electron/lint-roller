@@ -157,7 +157,10 @@ async function main(
 
       documentCounter++;
 
-      const possibleHistoryBlocks = await findPossibleApiHistoryBlocks(document.getText());
+      const documentText = document.getText();
+      if (!documentText.includes('<!--')) continue;
+
+      const possibleHistoryBlocks = await findPossibleApiHistoryBlocks(documentText);
 
       for (const possibleHistoryBlock of possibleHistoryBlocks) {
         historyBlockCounter++;
