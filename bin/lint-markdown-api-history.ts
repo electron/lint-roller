@@ -63,7 +63,7 @@ export async function findPossibleApiHistoryBlocks(
     // Very loose check for YAML history blocks to help catch user error
     (node) =>
       node.type === 'html' &&
-      (node as Literal<string>).value.toLowerCase().includes('```') &&
+      (node as Literal<string>).value.includes('```') &&
       (node as Literal<string>).value.toLowerCase().includes('yaml') &&
       (node as Literal<string>).value.toLowerCase().includes('history'),
     (node: Node, index) => {
