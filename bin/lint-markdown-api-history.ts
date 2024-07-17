@@ -74,7 +74,7 @@ export async function findPossibleApiHistoryBlocks(
     (node: HTML, index) => {
       codeBlocks.push({
         previousNode: index !== null ? tree.children[index - 1] : undefined,
-        value: node.value
+        value: node.value,
       });
     },
   );
