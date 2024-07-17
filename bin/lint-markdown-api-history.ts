@@ -390,24 +390,10 @@ async function init() {
 
     if (opts.schema) {
       opts.schema = resolve(process.cwd(), opts.schema);
-      try {
-        await access(opts.schema, constants.F_OK | constants.R_OK);
-      } catch (error) {
-        throw new Error(
-          `Error occurred while attempting to access JSON Schema file: '${opts.schema}'\n${error}`,
-        );
-      }
     }
 
     if (opts['breaking-changes-file']) {
       opts['breaking-changes-file'] = resolve(process.cwd(), opts['breaking-changes-file']);
-      try {
-        await access(opts['breaking-changes-file'], constants.F_OK | constants.R_OK);
-      } catch (error) {
-        throw new Error(
-          `Error occurred while attempting to access breaking changes file: '${opts['breaking-changes-file']}'\n${error}`,
-        );
-      }
     }
 
     const { historyBlockCounter, documentCounter, errorCounter, warningCounter } = await main(
