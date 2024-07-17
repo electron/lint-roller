@@ -30,7 +30,7 @@ describe('lint-roller-markdown-links', () => {
       '--root',
       FIXTURES_DIR,
       '--ignore',
-      '**/{{broken,valid}-*-link.md,*angle-brackets.md}',
+      '**/{{broken,valid}-*-link.md,*angle-brackets.md,api-history-*.md}',
       '*.md',
     );
 
@@ -47,6 +47,8 @@ describe('lint-roller-markdown-links', () => {
       '**/{broken,valid}-cross-file-link.md',
       '--ignore',
       '**/*angle-brackets.md',
+      '--ignore',
+      '**/api-history-*.md',
       '*.md',
     );
 
