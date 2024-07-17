@@ -42,13 +42,18 @@ interface Options {
   schema: string;
 }
 
-interface HTMLWithPreviousNode extends HTML {
+interface PossibleHistoryBlock {
   previousNode?: Node;
+  value: string;
+}
+
+function isHTML(node: Node): node is HTML {
+  return node.type === 'html';
 }
 
 export async function findPossibleApiHistoryBlocks(
   content: string,
-): Promise<HTMLWithPreviousNode[]> {
+): Promise<PossibleHistoryBlock[]> {
   const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
     fromMarkdown: typeof FromMarkdownFunction;
   };
@@ -56,25 +61,21 @@ export async function findPossibleApiHistoryBlocks(
     visit: typeof VisitFunction;
   };
   const tree = fromMarkdown(content);
-  const codeBlocks: HTMLWithPreviousNode[] = [];
+  const codeBlocks: PossibleHistoryBlock[] = [];
 
   visit(
     tree,
     // Very loose check for YAML history blocks to help catch user error
-    (node) =>
-      node.type === 'html' &&
-      (node as Literal<string>).value.includes('```') &&
-      (node as Literal<string>).value.toLowerCase().includes('yaml') &&
-      (node as Literal<string>).value.toLowerCase().includes('history'),
-    (node: Node, index) => {
-      // We don't want to modify the original node
-      // ? Maybe just copy the previous node's type instead of the whole node
-      const shallowNodeCopy = { ...node } as HTMLWithPreviousNode;
-      if (index !== null) {
-        const previousNode = tree.children[index - 1];
-        if (previousNode) shallowNodeCopy.previousNode = previousNode;
-      }
-      codeBlocks.push(shallowNodeCopy);
+    (node): node is HTML =>
+      isHTML(node) &&
+      node.value.includes('```') &&
+      node.value.toLowerCase().includes('yaml') &&
+      node.value.toLowerCase().includes('history'),
+    (node: HTML, index) => {
+      codeBlocks.push({
+        previousNode: index !== null ? tree.children[index - 1] : undefined,
+        value: node.value
+      });
     },
   );
 
@@ -114,8 +115,8 @@ async function main(
       try {
         const ajv = new Ajv();
         const ApiHistorySchemaFile = await readFile(schema, { encoding: 'utf-8' });
-        const ApiHistorySchema = JSON.parse(ApiHistorySchemaFile) as JSONSchemaType<ApiHistory>;
-        validateAgainstSchema = ajv.compile(ApiHistorySchema);
+        const ApiHistorySchema = JSON.parse(ApiHistorySchemaFile);
+        validateAgainstSchema = ajv.compile<ApiHistory>(ApiHistorySchema);
       } catch (error) {
         throw new Error(
           `Error occurred while attempting to read API history schema and compile AJV validator:\n${error}\n`,
@@ -231,10 +232,7 @@ async function main(
         }
 
         if (checkPlacement) {
-          if (
-            !possibleHistoryBlock.previousNode ||
-            possibleHistoryBlock.previousNode.type !== 'heading'
-          ) {
+          if (possibleHistoryBlock.previousNode?.type !== 'heading') {
             console.error(
               'Error occurred while parsing Markdown document:\n\n' +
                 `'${filepath}'\n\n` +
