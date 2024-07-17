@@ -1,13 +1,13 @@
 import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path, { resolve } from 'node:path';
-import { readdir, unlink, writeFile } from 'node:fs/promises';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
 const MOCKUP_API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'mockup-api-history.schema.json');
 const MOCKUP_BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'mockup-breaking-changes.md');
-const MOCKUP_DOCS_API_FOLDER = resolve(FIXTURES_DIR, 'api-history/mockup-api');
 
 const stdoutRegex =
   /Processed (\d+) API history block\(s\) in (\d+) document\(s\) with (\d+) error\(s\) and (\d+) warning\(s\)./;
@@ -20,11 +20,16 @@ function runLintMarkdownApiHistory(...args: string[]) {
   );
 }
 
-async function clearMockupApiFolder() {
-  for (const file of await readdir(MOCKUP_DOCS_API_FOLDER)) {
-    if (file === '.gitkeep') continue;
-    await unlink(path.join(MOCKUP_DOCS_API_FOLDER, file));
+// Have to do this because beforeAll doesn't have a context
+let _tempDocsFolder: string | null = null;
+
+async function createOrGetExistingTempDocsFolder(): Promise<string> {
+  if (_tempDocsFolder) {
+    return _tempDocsFolder;
   }
+
+  _tempDocsFolder = await mkdtemp(path.join(tmpdir(), 'lint-roller-markdown-api-history-'));
+  return _tempDocsFolder;
 }
 
 type GenerateRandomApiDocumentsResult = {
@@ -122,7 +127,8 @@ async function generateRandomApiDocuments(): Promise<GenerateRandomApiDocumentsR
         'Passing `{ x: 0, y: 0 }` will reset the position to default.\n\n';
     }
 
-    await writeFile(resolve(MOCKUP_DOCS_API_FOLDER, `${documentIdx}.md`), content);
+    const tempDocsFolder = await createOrGetExistingTempDocsFolder();
+    await writeFile(resolve(tempDocsFolder, `${documentIdx}.md`), content);
   }
 
   _generateRandomApiDocumentsResult = {
@@ -136,12 +142,13 @@ async function generateRandomApiDocuments(): Promise<GenerateRandomApiDocumentsR
 
 describe('lint-roller-markdown-api-history', () => {
   beforeAll(async () => {
-    await clearMockupApiFolder();
+    await createOrGetExistingTempDocsFolder();
     await generateRandomApiDocuments();
   });
 
   afterAll(async () => {
-    await clearMockupApiFolder();
+    const tempDocsFolder = await createOrGetExistingTempDocsFolder();
+    await rm(tempDocsFolder, { recursive: true, force: true });
   });
 
   it('should run clean when there are no errors', () => {
@@ -401,6 +408,8 @@ describe('lint-roller-markdown-api-history', () => {
   });
 
   it('should lint a large amount of api history', async () => {
+    const tempDocsFolder = await createOrGetExistingTempDocsFolder();
+
     const {
       generatedDocumentCount,
       generatedBlockCount,
@@ -410,7 +419,7 @@ describe('lint-roller-markdown-api-history', () => {
 
     const { status, stdout, stderr } = runLintMarkdownApiHistory(
       '--root',
-      MOCKUP_DOCS_API_FOLDER,
+      tempDocsFolder,
       '--schema',
       MOCKUP_API_HISTORY_SCHEMA,
       '--breaking-changes-file',
