@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
 const API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'api-history.schema.json');
-const BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'breaking-changes.md');
+const BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'breaking-changes.md.api-history');
 
 const stdoutRegex =
   /Processed (\d+) API history block\(s\) in (\d+) document\(s\) with (\d+) error\(s\) and (\d+) warning\(s\)./;
