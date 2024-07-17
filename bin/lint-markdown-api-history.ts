@@ -33,13 +33,19 @@ interface ApiHistory {
 }
 
 interface Options {
+  // Check if the API history block is preceded by a heading
   checkPlacement: boolean;
+  // Check if the 'breaking-changes-header' heading id's in the API history block exist in the breaking changes file at this filepath
+  breakingChangesFile: string;
+  // Check if the API history block contains strings that might cause issues when parsing the YAML
+  checkStrings: boolean;
+  // Array of glob patterns to ignore when processing files
+  ignoreGlobs: string[];
+  // Check if the API history block's YAML adheres to the JSON schema at this filepath
+  schema: string;
+
   // TODO: Implement this when GH_TOKEN isn't needed to fetch PR release versions anymore
   // checkPullRequestLinks: boolean;
-  breakingChangesFile: string;
-  checkStrings: boolean;
-  ignoreGlobs: string[];
-  schema: string;
 }
 
 interface PossibleHistoryBlock {
