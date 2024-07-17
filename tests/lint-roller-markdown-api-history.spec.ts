@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
 const API_HISTORY_SCHEMA = resolve(FIXTURES_DIR, 'api-history.schema.json');
-const MOCKUP_BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'mockup-breaking-changes.md');
+const BREAKING_CHANGES_FILE = resolve(FIXTURES_DIR, 'breaking-changes.md');
 
 const stdoutRegex =
   /Processed (\d+) API history block\(s\) in (\d+) document\(s\) with (\d+) error\(s\) and (\d+) warning\(s\)./;
@@ -50,8 +50,8 @@ async function generateRandomApiDocuments(): Promise<GenerateRandomApiDocumentsR
   const testPrNumbers = ['22533', '26789', '37094'];
   const testHeadingIds = [
     'deprecated-browserwindowsettrafficlightpositionposition',
-    'deprecated-mockup-number-1',
-    'deprecated-mockup-number-2',
+    'behavior-changed-windowflashframebool-will-flash-dock-icon-continuously-on-macos',
+    'default-changed-renderers-without-nodeintegration-true-are-sandboxed-by-default',
   ];
 
   if (_generateRandomApiDocumentsResult) {
@@ -158,7 +158,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--schema',
       API_HISTORY_SCHEMA,
       '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
+      BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
       'api-history-valid.md',
@@ -248,7 +248,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--schema',
       API_HISTORY_SCHEMA,
       '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
+      BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
       'api-history-heading-missing.md',
@@ -272,7 +272,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--schema',
       API_HISTORY_SCHEMA,
       '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
+      BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
       'api-history-placement-invalid.md',
@@ -296,7 +296,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--schema',
       API_HISTORY_SCHEMA,
       '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
+      BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
       'api-history-string-invalid.md',
@@ -389,7 +389,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--schema',
       API_HISTORY_SCHEMA,
       '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
+      BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
       '{api-history-valid,api-history-yaml-invalid,api-history-heading-missing}.md',
@@ -423,7 +423,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--schema',
       API_HISTORY_SCHEMA,
       '--breaking-changes-file',
-      MOCKUP_BREAKING_CHANGES_FILE,
+      BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
       '*.md',
