@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
-import { readFile, access, constants } from 'node:fs/promises';
+import { access, constants, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import * as minimist from 'minimist';
 
-import { DocsWorkspace } from '../lib/markdown';
+import Ajv, { ValidateFunction } from 'ajv';
+import type { fromHtml as FromHtmlFunction } from 'hast-util-from-html';
+import type { HTML, Heading } from 'mdast';
+import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
+import * as minimist from 'minimist';
+import type { Literal, Node } from 'unist';
+import type { visit as VisitFunction } from 'unist-util-visit';
 import { URI } from 'vscode-uri';
 import { parse as parseYaml } from 'yaml';
 
-import type { HTML, Heading } from 'mdast';
-import type { Node, Literal } from 'unist';
-import type { visit as VisitFunction } from 'unist-util-visit';
-import type { fromHtml as FromHtmlFunction } from 'hast-util-from-html';
-import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import { dynamicImport } from '../lib/helpers';
-import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
+import { DocsWorkspace } from '../lib/markdown';
 
 // "<any char>: <match group>"
 const possibleStringRegex = /^[ \S]+?: *?(\S[ \S]+?)$/gm;
