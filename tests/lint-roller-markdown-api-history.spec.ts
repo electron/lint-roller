@@ -321,6 +321,31 @@ describe('lint-roller-markdown-api-history', () => {
     expect(status).toEqual(1);
   });
 
+  it('should not run clean when there are description errors', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      BREAKING_CHANGES_FILE,
+      '--check-placement',
+      '--check-strings',
+      '--check-descriptions',
+      'api-history-description-invalid.md',
+    );
+
+    expect(stderr).toMatch(/Possible description field is not surrounded by double quotes./);
+
+    const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
+
+    expect(Number(blocks)).toEqual(1);
+    expect(Number(documents)).toEqual(1);
+    expect(Number(errors)).toEqual(1);
+    expect(Number(warnings)).toEqual(0);
+    expect(status).toEqual(1);
+  });
+
   it('can ignore a glob', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
