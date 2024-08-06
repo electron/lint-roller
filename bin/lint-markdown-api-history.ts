@@ -19,6 +19,7 @@ import { DocsWorkspace } from '../lib/markdown';
 // "<any char>: <match group>"
 const possibleStringRegex = /^[ \S]+?: *?(\S[ \S]+?)$/gm;
 const nonAlphaNumericDotRegex = /[^a-zA-Z0-9.]/g;
+const possibleDescriptionRegex = /^[ \S]+?description: *?(\S[ \S]+?)$/gm;
 
 interface ChangeSchema {
   'pr-url': string;
@@ -39,6 +40,8 @@ interface Options {
   breakingChangesFile: string;
   // Check if the API history block contains strings that might cause issues when parsing the YAML
   checkStrings: boolean;
+  // Check if the API history block contains descriptions that aren't surrounded by double quotation marks
+  checkDescriptions: boolean;
   // Array of glob patterns to ignore when processing files
   ignoreGlobs: string[];
   // Check if the API history block's YAML adheres to the JSON schema at this filepath
@@ -98,7 +101,14 @@ type LintingResults = {
 async function main(
   workspaceRoot: string,
   globs: string[],
-  { checkPlacement, breakingChangesFile, checkStrings, schema, ignoreGlobs = [] }: Options,
+  {
+    checkPlacement,
+    breakingChangesFile,
+    checkStrings,
+    checkDescriptions,
+    schema,
+    ignoreGlobs = [],
+  }: Options,
 ): Promise<LintingResults> {
   let documentCounter = 0;
   let historyBlockCounter = 0;
@@ -237,6 +247,35 @@ async function main(
           }
         }
 
+        // Throw an error if a description isn't surrounded by double quotation marks
+        if (checkDescriptions) {
+          const possibleDescription = codeBlock.value.matchAll(possibleDescriptionRegex);
+
+          for (const [matchedLine, matchedGroup] of possibleDescription) {
+            const trimmedMatchedGroup = matchedGroup.trim();
+            const isMatchedGroupInsideQuotes =
+              (trimmedMatchedGroup.startsWith('"') && trimmedMatchedGroup.endsWith('"')) ||
+              (trimmedMatchedGroup.startsWith("'") && trimmedMatchedGroup.endsWith("'"));
+
+            if (isMatchedGroupInsideQuotes) continue;
+
+            console.error(
+              'Error occurred while parsing Markdown document:\n\n' +
+                `'${filepath}'\n\n` +
+                'Possible description field is not surrounded by double quotes.\n\n' +
+                'This might cause issues when parsing the YAML (might not throw an error)\n\n' +
+                'Matched group:\n\n' +
+                `${matchedGroup}\n\n` +
+                'Matched line:\n\n' +
+                `${matchedLine}\n\n` +
+                'API history block:\n\n' +
+                `${possibleHistoryBlock.value}\n`,
+            );
+            errorCounter++;
+            continue;
+          }
+        }
+
         if (checkPlacement) {
           if (possibleHistoryBlock.previousNode?.type !== 'heading') {
             console.error(
@@ -341,7 +380,7 @@ function parseCommandLine() {
       console.log(
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
           ' [-h|--help]' +
-          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings]' +
+          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings] [--check-descriptions]' +
           ' [--schema <path>]' +
           ' [--ignore <globs>] [--ignore-path <path>]',
       );
@@ -352,12 +391,13 @@ function parseCommandLine() {
   };
 
   const opts = minimist(process.argv.slice(2), {
-    boolean: ['help', 'check-placement', 'check-strings'],
+    boolean: ['help', 'check-placement', 'check-strings', 'check-descriptions'],
     string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
     unknown: showUsage,
     default: {
       'check-placement': true,
       'check-strings': true,
+      'check-descriptions': true,
     },
   });
 
@@ -403,6 +443,7 @@ async function init() {
         checkPlacement: opts['check-placement'],
         breakingChangesFile: opts['breaking-changes-file'],
         checkStrings: opts['check-strings'],
+        checkDescriptions: opts['check-descriptions'],
         ignoreGlobs: opts.ignore,
         schema: opts.schema,
       },
