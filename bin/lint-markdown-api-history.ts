@@ -254,8 +254,7 @@ async function main(
           for (const [matchedLine, matchedGroup] of possibleDescription) {
             const trimmedMatchedGroup = matchedGroup.trim();
             const isMatchedGroupInsideQuotes =
-              (trimmedMatchedGroup.startsWith('"') && trimmedMatchedGroup.endsWith('"')) ||
-              (trimmedMatchedGroup.startsWith("'") && trimmedMatchedGroup.endsWith("'"));
+              trimmedMatchedGroup.startsWith('"') && trimmedMatchedGroup.endsWith('"');
 
             if (isMatchedGroupInsideQuotes) continue;
 
