@@ -42,6 +42,8 @@ interface Options {
   checkStrings: boolean;
   // Check if the API history block contains descriptions that aren't surrounded by double quotation marks
   checkDescriptions: boolean;
+  // Check if the API history block contains comments
+  disallowComments: boolean;
   // Array of glob patterns to ignore when processing files
   ignoreGlobs: string[];
   // Check if the API history block's YAML adheres to the JSON schema at this filepath
@@ -106,6 +108,7 @@ async function main(
     breakingChangesFile,
     checkStrings,
     checkDescriptions,
+    disallowComments,
     schema,
     ignoreGlobs = [],
   }: Options,
@@ -305,6 +308,27 @@ async function main(
           continue;
         }
 
+        if (disallowComments) {
+          const numberOfHashtagsInCodeBlock = (codeBlock.value.match(/#/g) || []).length;
+          const unsafeHistoryJsonString = JSON.stringify(unsafeHistory);
+          const numberOfHashtagsInHistoryJsonString = (unsafeHistoryJsonString.match(/#/g) || [])
+            .length;
+
+          // If the number of hashtags in the code block is greater than the number of hashtags in the JSON string,
+          //  then the API History contains comments.
+          if (numberOfHashtagsInCodeBlock > numberOfHashtagsInHistoryJsonString) {
+            console.error(
+              'Error occurred while parsing Markdown document:\n\n' +
+                `'${filepath}'\n\n` +
+                'API History cannot contain YAML comments.\n\n' +
+                'API history block:\n\n' +
+                `${possibleHistoryBlock.value}\n`,
+            );
+            errorCounter++;
+            continue;
+          }
+        }
+
         if (!schema || validateAgainstSchema === null) continue;
 
         const isValid = validateAgainstSchema(unsafeHistory);
@@ -379,7 +403,7 @@ function parseCommandLine() {
       console.log(
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
           ' [-h|--help]' +
-          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings] [--check-descriptions]' +
+          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings] [--check-descriptions] [--disallow-comments]' +
           ' [--schema <path>]' +
           ' [--ignore <globs>] [--ignore-path <path>]',
       );
@@ -390,13 +414,20 @@ function parseCommandLine() {
   };
 
   const opts = minimist(process.argv.slice(2), {
-    boolean: ['help', 'check-placement', 'check-strings', 'check-descriptions'],
+    boolean: [
+      'help',
+      'check-placement',
+      'check-strings',
+      'check-descriptions',
+      'disallow-comments',
+    ],
     string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
     unknown: showUsage,
     default: {
       'check-placement': true,
       'check-strings': true,
       'check-descriptions': true,
+      'disallow-comments': true,
     },
   });
 
@@ -443,6 +474,7 @@ async function init() {
         breakingChangesFile: opts['breaking-changes-file'],
         checkStrings: opts['check-strings'],
         checkDescriptions: opts['check-descriptions'],
+        disallowComments: opts['disallow-comments'],
         ignoreGlobs: opts.ignore,
         schema: opts.schema,
       },
