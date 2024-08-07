@@ -6,7 +6,7 @@ added:
   - pr-url: https://github.com/electron/electron/pull/22533
 changes:
   - pr-url: https://github.com/electron/electron/pull/26789
-    description: Ma
+    description: "Ma"
 deprecated:
   - pr-url: https://github.com/electron/electron/pull/37094
     breaking-changes-header: deprecated-browserwindowsettrafficlightpositionposition

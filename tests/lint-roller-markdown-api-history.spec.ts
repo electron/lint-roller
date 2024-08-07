@@ -72,7 +72,7 @@ async function generateRandomApiDocuments(): Promise<GenerateRandomApiDocumentsR
 
     if (isError) {
       // Will cause a warning but not a yaml parse error
-      return { isError, stringWarnChar: '$' };
+      return { isError, stringWarnChar: '#' };
     } else {
       return { isError, stringWarnChar: '' };
     }
@@ -117,10 +117,10 @@ async function generateRandomApiDocuments(): Promise<GenerateRandomApiDocumentsR
         `  - pr-url: ${generateRandomPrUrl()}\n` +
         'changes:\n' +
         `  - pr-url: ${generateRandomPrUrl()}\n` +
-        `    description: ${stringWarnChar}Made \`trafficLightPosition\` work for \`customButtonOnHover\`.\n` +
+        `    description: "Made \`trafficLightPosition\` work for \`customButtonOnHover\`."\n` +
         'deprecated:\n' +
         `  - pr-url: ${generateRandomPrUrl()}\n` +
-        `    breaking-changes-header: ${generateRandomBreakingHeadingId()}\n` +
+        `    breaking-changes-header: ${generateRandomBreakingHeadingId()} ${stringWarnChar}\n` +
         '```\n' +
         '-->\n\n' +
         'Set a custom position for the traffic light buttons in frameless window.\n' +
@@ -161,6 +161,8 @@ describe('lint-roller-markdown-api-history', () => {
       BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       'api-history-valid.md',
     );
 
@@ -183,10 +185,12 @@ describe('lint-roller-markdown-api-history', () => {
       API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       'api-history-yaml-invalid.md',
     );
 
-    expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
+    expect(stderr).toMatch(/must be array/);
 
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
@@ -205,6 +209,8 @@ describe('lint-roller-markdown-api-history', () => {
       API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       'api-history-schema-invalid.md',
     );
 
@@ -227,6 +233,8 @@ describe('lint-roller-markdown-api-history', () => {
       API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       'api-history-format-invalid.md',
     );
 
@@ -251,6 +259,8 @@ describe('lint-roller-markdown-api-history', () => {
       BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       'api-history-heading-missing.md',
     );
 
@@ -275,6 +285,8 @@ describe('lint-roller-markdown-api-history', () => {
       BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       'api-history-placement-invalid.md',
     );
 
@@ -299,11 +311,13 @@ describe('lint-roller-markdown-api-history', () => {
       BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       'api-history-string-invalid.md',
     );
 
     expect(stderr).toMatch(/Possible string value starts\/ends with a non-alphanumeric character/);
-    expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
+    expect(stderr).toMatch(/must be string/);
 
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
@@ -311,6 +325,58 @@ describe('lint-roller-markdown-api-history', () => {
     expect(Number(documents)).toEqual(1);
     expect(Number(errors)).toEqual(1);
     expect(Number(warnings)).toEqual(1);
+    expect(status).toEqual(1);
+  });
+
+  it('should not run clean when there are description errors', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      BREAKING_CHANGES_FILE,
+      '--check-placement',
+      '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
+      'api-history-description-invalid.md',
+    );
+
+    expect(stderr).toMatch(/Possible description field is not surrounded by double quotes./);
+
+    const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
+
+    expect(Number(blocks)).toEqual(1);
+    expect(Number(documents)).toEqual(1);
+    expect(Number(errors)).toEqual(1);
+    expect(Number(warnings)).toEqual(0);
+    expect(status).toEqual(1);
+  });
+
+  it('should not run clean when there are yaml comments', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      BREAKING_CHANGES_FILE,
+      '--check-placement',
+      '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
+      '{api-history-line-comment,api-history-separated-comment,api-history-valid-hashtags}.md',
+    );
+
+    expect(stderr).toMatch(/API History cannot contain YAML comments./);
+
+    const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
+
+    expect(Number(blocks)).toEqual(3);
+    expect(Number(documents)).toEqual(3);
+    expect(Number(errors)).toEqual(2);
+    expect(Number(warnings)).toEqual(0);
     expect(status).toEqual(1);
   });
 
@@ -322,6 +388,8 @@ describe('lint-roller-markdown-api-history', () => {
       API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       '--ignore',
       '**/api-history-yaml-invalid.md',
       '{api-history-valid,api-history-yaml-invalid}.md',
@@ -344,6 +412,8 @@ describe('lint-roller-markdown-api-history', () => {
       API_HISTORY_SCHEMA,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       '--ignore',
       '**/api-history-valid.md',
       '--ignore',
@@ -370,6 +440,8 @@ describe('lint-roller-markdown-api-history', () => {
       resolve(FIXTURES_DIR, 'ignorepaths'),
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -392,6 +464,8 @@ describe('lint-roller-markdown-api-history', () => {
       BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
       '{api-history-valid,api-history-yaml-invalid,api-history-heading-missing}.md',
     );
 
@@ -426,6 +500,9 @@ describe('lint-roller-markdown-api-history', () => {
       BREAKING_CHANGES_FILE,
       '--check-placement',
       '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
+      'false',
       '*.md',
     );
 

@@ -2,7 +2,9 @@
 
 <!--
 ```YAML history
-added: pr-url: https://github.com/electron/electron/pull/22533
+added:
+  # comment
+  - pr-url: https://github.com/electron/electron/pull/22533
 changes:
   - pr-url: https://github.com/electron/electron/pull/26789
     description: "Made `trafficLightPosition` option work for `customButtonOnHover`."
