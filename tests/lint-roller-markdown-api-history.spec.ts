@@ -190,7 +190,7 @@ describe('lint-roller-markdown-api-history', () => {
       'api-history-yaml-invalid.md',
     );
 
-    expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
+    expect(stderr).toMatch(/must be array/);
 
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
@@ -317,7 +317,7 @@ describe('lint-roller-markdown-api-history', () => {
     );
 
     expect(stderr).toMatch(/Possible string value starts\/ends with a non-alphanumeric character/);
-    expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
+    expect(stderr).toMatch(/must be string/);
 
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 

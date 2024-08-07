@@ -11,7 +11,7 @@ import * as minimist from 'minimist';
 import type { Literal, Node } from 'unist';
 import type { visit as VisitFunction } from 'unist-util-visit';
 import { URI } from 'vscode-uri';
-import { parse as parseYaml } from 'yaml';
+import { parseDocument, visit as yamlVisit } from 'yaml';
 
 import { dynamicImport } from '../lib/helpers';
 import { DocsWorkspace } from '../lib/markdown';
@@ -292,10 +292,12 @@ async function main(
           }
         }
 
+        let unsafeHistoryDocument = null;
         let unsafeHistory = null;
 
         try {
-          unsafeHistory = parseYaml(codeBlock.value);
+          unsafeHistoryDocument = parseDocument(codeBlock.value);
+          unsafeHistory = unsafeHistoryDocument.toJS();
         } catch (error) {
           console.error(
             'Error occurred while parsing Markdown document:\n\n' +
@@ -309,14 +311,20 @@ async function main(
         }
 
         if (disallowComments) {
-          const numberOfHashtagsInCodeBlock = (codeBlock.value.match(/#/g) || []).length;
-          const unsafeHistoryJsonString = JSON.stringify(unsafeHistory);
-          const numberOfHashtagsInHistoryJsonString = (unsafeHistoryJsonString.match(/#/g) || [])
-            .length;
+          let commentFound = false;
 
-          // If the number of hashtags in the code block is greater than the number of hashtags in the JSON string,
-          //  then the API History contains comments.
-          if (numberOfHashtagsInCodeBlock > numberOfHashtagsInHistoryJsonString) {
+          yamlVisit(unsafeHistoryDocument, (_, node) => {
+            if (
+              typeof node === 'object' &&
+              node !== null &&
+              ('comment' in node || 'commentBefore' in node)
+            ) {
+              commentFound = true;
+              return yamlVisit.BREAK;
+            }
+          });
+
+          if (commentFound) {
             console.error(
               'Error occurred while parsing Markdown document:\n\n' +
                 `'${filepath}'\n\n` +
