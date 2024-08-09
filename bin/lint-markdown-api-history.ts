@@ -11,7 +11,7 @@ import * as minimist from 'minimist';
 import type { Literal, Node } from 'unist';
 import type { visit as VisitFunction } from 'unist-util-visit';
 import { URI } from 'vscode-uri';
-import { parse as parseYaml } from 'yaml';
+import { parseDocument, visit as yamlVisit } from 'yaml';
 
 import { dynamicImport } from '../lib/helpers';
 import { DocsWorkspace } from '../lib/markdown';
@@ -42,6 +42,8 @@ interface Options {
   checkStrings: boolean;
   // Check if the API history block contains descriptions that aren't surrounded by double quotation marks
   checkDescriptions: boolean;
+  // Check if the API history block contains comments
+  disallowComments: boolean;
   // Array of glob patterns to ignore when processing files
   ignoreGlobs: string[];
   // Check if the API history block's YAML adheres to the JSON schema at this filepath
@@ -106,6 +108,7 @@ async function main(
     breakingChangesFile,
     checkStrings,
     checkDescriptions,
+    disallowComments,
     schema,
     ignoreGlobs = [],
   }: Options,
@@ -290,10 +293,12 @@ async function main(
           }
         }
 
+        let unsafeHistoryDocument = null;
         let unsafeHistory = null;
 
         try {
-          unsafeHistory = parseYaml(codeBlock.value);
+          unsafeHistoryDocument = parseDocument(codeBlock.value);
+          unsafeHistory = unsafeHistoryDocument.toJS();
         } catch (error) {
           console.error(
             'Error occurred while parsing Markdown document:\n\n' +
@@ -304,6 +309,33 @@ async function main(
           );
           errorCounter++;
           continue;
+        }
+
+        if (disallowComments) {
+          let commentFound = false;
+
+          yamlVisit(unsafeHistoryDocument, (_, node) => {
+            if (
+              typeof node === 'object' &&
+              node !== null &&
+              ('comment' in node || 'commentBefore' in node)
+            ) {
+              commentFound = true;
+              return yamlVisit.BREAK;
+            }
+          });
+
+          if (commentFound) {
+            console.error(
+              'Error occurred while parsing Markdown document:\n\n' +
+                `'${filepath}'\n\n` +
+                'API History cannot contain YAML comments.\n\n' +
+                'API history block:\n\n' +
+                `${possibleHistoryBlock.value}\n`,
+            );
+            errorCounter++;
+            continue;
+          }
         }
 
         if (!schema || validateAgainstSchema === null) continue;
@@ -380,7 +412,7 @@ function parseCommandLine() {
       console.log(
         'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
           ' [-h|--help]' +
-          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings] [--check-descriptions]' +
+          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings] [--check-descriptions] [--disallow-comments]' +
           ' [--schema <path>]' +
           ' [--ignore <globs>] [--ignore-path <path>]',
       );
@@ -391,13 +423,20 @@ function parseCommandLine() {
   };
 
   const opts = minimist(process.argv.slice(2), {
-    boolean: ['help', 'check-placement', 'check-strings', 'check-descriptions'],
+    boolean: [
+      'help',
+      'check-placement',
+      'check-strings',
+      'check-descriptions',
+      'disallow-comments',
+    ],
     string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
     unknown: showUsage,
     default: {
       'check-placement': true,
       'check-strings': true,
       'check-descriptions': true,
+      'disallow-comments': true,
     },
   });
 
@@ -444,6 +483,7 @@ async function init() {
         breakingChangesFile: opts['breaking-changes-file'],
         checkStrings: opts['check-strings'],
         checkDescriptions: opts['check-descriptions'],
+        disallowComments: opts['disallow-comments'],
         ignoreGlobs: opts.ignore,
         schema: opts.schema,
       },

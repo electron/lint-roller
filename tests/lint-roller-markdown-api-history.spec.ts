@@ -162,6 +162,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-valid.md',
     );
 
@@ -185,10 +186,11 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-yaml-invalid.md',
     );
 
-    expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
+    expect(stderr).toMatch(/must be array/);
 
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
@@ -208,6 +210,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-schema-invalid.md',
     );
 
@@ -231,6 +234,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-format-invalid.md',
     );
 
@@ -256,6 +260,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-heading-missing.md',
     );
 
@@ -281,6 +286,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-placement-invalid.md',
     );
 
@@ -306,11 +312,12 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-string-invalid.md',
     );
 
     expect(stderr).toMatch(/Possible string value starts\/ends with a non-alphanumeric character/);
-    expect(stderr).toMatch(/YAMLParseError: Nested mappings are not allowed/);
+    expect(stderr).toMatch(/must be string/);
 
     const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
 
@@ -332,6 +339,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       'api-history-description-invalid.md',
     );
 
@@ -346,6 +354,32 @@ describe('lint-roller-markdown-api-history', () => {
     expect(status).toEqual(1);
   });
 
+  it('should not run clean when there are yaml comments', () => {
+    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+      '--root',
+      FIXTURES_DIR,
+      '--schema',
+      API_HISTORY_SCHEMA,
+      '--breaking-changes-file',
+      BREAKING_CHANGES_FILE,
+      '--check-placement',
+      '--check-strings',
+      '--check-descriptions',
+      '--disallow-comments',
+      '{api-history-line-comment,api-history-separated-comment,api-history-valid-hashtags}.md',
+    );
+
+    expect(stderr).toMatch(/API History cannot contain YAML comments./);
+
+    const [blocks, documents, errors, warnings] = stdoutRegex.exec(stdout)?.slice(1, 5) ?? [];
+
+    expect(Number(blocks)).toEqual(3);
+    expect(Number(documents)).toEqual(3);
+    expect(Number(errors)).toEqual(2);
+    expect(Number(warnings)).toEqual(0);
+    expect(status).toEqual(1);
+  });
+
   it('can ignore a glob', () => {
     const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
@@ -355,6 +389,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       '--ignore',
       '**/api-history-yaml-invalid.md',
       '{api-history-valid,api-history-yaml-invalid}.md',
@@ -378,6 +413,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       '--ignore',
       '**/api-history-valid.md',
       '--ignore',
@@ -405,6 +441,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       '{api-history-valid,api-history-yaml-invalid}.md',
     );
 
@@ -428,6 +465,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
       '{api-history-valid,api-history-yaml-invalid,api-history-heading-missing}.md',
     );
 
@@ -463,6 +501,8 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
+      '--disallow-comments',
+      'false',
       '*.md',
     );
 
