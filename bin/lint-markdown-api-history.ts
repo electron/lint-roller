@@ -270,9 +270,9 @@ async function main(
                   `${possibleHistoryBlock.value}\n`,
               );
               errorCounter++;
+              // Behold, one of the rare occasions when a labeled statement is useful.
               continue historyBlockForLoop;
             }
-
           }
         }
 
