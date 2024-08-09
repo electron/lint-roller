@@ -182,7 +182,7 @@ async function main(
 
       const possibleHistoryBlocks = await findPossibleApiHistoryBlocks(documentText);
 
-      for (const possibleHistoryBlock of possibleHistoryBlocks) {
+      historyBlockForLoop: for (const possibleHistoryBlock of possibleHistoryBlocks) {
         historyBlockCounter++;
 
         const {
@@ -259,22 +259,23 @@ async function main(
             const isMatchedGroupInsideQuotes =
               trimmedMatchedGroup.startsWith('"') && trimmedMatchedGroup.endsWith('"');
 
-            if (isMatchedGroupInsideQuotes) continue;
-
-            console.error(
-              'Error occurred while parsing Markdown document:\n\n' +
-                `'${filepath}'\n\n` +
-                'Possible description field is not surrounded by double quotes.\n\n' +
-                'This might cause issues when parsing the YAML (might not throw an error)\n\n' +
-                'Matched group:\n\n' +
-                `${matchedGroup}\n\n` +
-                'Matched line:\n\n' +
-                `${matchedLine}\n\n` +
-                'API history block:\n\n' +
-                `${possibleHistoryBlock.value}\n`,
-            );
-            errorCounter++;
-            continue;
+            if (!isMatchedGroupInsideQuotes) {
+              console.error(
+                'Error occurred while parsing Markdown document:\n\n' +
+                  `'${filepath}'\n\n` +
+                  'Possible description field is not surrounded by double quotes.\n\n' +
+                  'This might cause issues when parsing the YAML (might not throw an error)\n\n' +
+                  'Matched group:\n\n' +
+                  `${matchedGroup}\n\n` +
+                  'Matched line:\n\n' +
+                  `${matchedLine}\n\n` +
+                  'API history block:\n\n' +
+                  `${possibleHistoryBlock.value}\n`,
+              );
+              errorCounter++;
+              // Behold, one of the rare occasions when a labeled statement is useful.
+              continue historyBlockForLoop;
+            }
           }
         }
 
