@@ -10,7 +10,6 @@
 ```bash
 yarn global add @electron/lint-roller
 
-electron-markdownlint "**/*.md"
 lint-roller-markdown-links --root docs/ "docs/**/*.md"
 ```
 
@@ -24,9 +23,6 @@ across repos. To use the base config, extend it in `.markdownlint.json`:
   "extends": "@electron/lint-roller/configs/markdownlint.json"
 }
 ```
-
-`electron-markdownlint` is provided as a wrapper command which adds extra
-rules found in this package automatically.
 
 `lint-roller-markdown-links` is a command to further lint links to find
 broken relative links, including URL fragments, and can also be used to
