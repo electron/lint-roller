@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findCurlyBracedDirectives } from '../lib/helpers';
+import { findCurlyBracedDirectives } from '../lib/helpers.js';
 
 describe('findCurlyBracedDirectives', () => {
   it('should return an empty array if no matches', () => {

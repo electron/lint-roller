@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import * as glob from 'glob';
-import * as MarkdownIt from 'markdown-it';
+import MarkdownIt from 'markdown-it';
 import {
   githubSlugifier,
   resolveInternalDocumentLink,
@@ -17,16 +17,14 @@ import {
   MdLink,
   MdLinkKind,
 } from '@dsanders11/vscode-markdown-languageservice';
+import { visit } from 'unist-util-visit';
+import { fromMarkdown } from 'mdast-util-from-markdown';
 import { Emitter, Range } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 
-import { dynamicImport } from './helpers';
-
 import type { Code, Definition, ImageReference, Link, LinkReference } from 'mdast';
-import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
 import type { Node, Position } from 'unist';
-import type { visit as VisitFunction } from 'unist-util-visit';
 
 export type { Code };
 
@@ -186,10 +184,6 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
   }
 
   async getAllLinks(document: ITextDocument): Promise<MdLink[]> {
-    const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
-      fromMarkdown: typeof FromMarkdownFunction;
-    };
-
     const tree = fromMarkdown(document.getText());
 
     const links = [
@@ -202,10 +196,6 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
   }
 
   async #getInlineLinks(document: ITextDocument, tree: Node): Promise<MdLink[]> {
-    const { visit } = (await dynamicImport('unist-util-visit')) as {
-      visit: typeof VisitFunction;
-    };
-
     const documentUri = URI.parse(document.uri);
     const links: MdLink[] = [];
 
@@ -246,10 +236,6 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
   }
 
   async #getReferenceLinks(document: ITextDocument, tree: Node): Promise<MdLink[]> {
-    const { visit } = (await dynamicImport('unist-util-visit')) as {
-      visit: typeof VisitFunction;
-    };
-
     const links: MdLink[] = [];
 
     visit(
@@ -287,10 +273,6 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
   }
 
   async #getLinkDefinitions(document: ITextDocument, tree: Node): Promise<MdLink[]> {
-    const { visit } = (await dynamicImport('unist-util-visit')) as {
-      visit: typeof VisitFunction;
-    };
-
     const documentUri = URI.parse(document.uri);
     const links: MdLink[] = [];
 
@@ -336,13 +318,6 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
 }
 
 export async function getCodeBlocks(content: string): Promise<Code[]> {
-  const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
-    fromMarkdown: typeof FromMarkdownFunction;
-  };
-  const { visit } = (await dynamicImport('unist-util-visit')) as {
-    visit: typeof VisitFunction;
-  };
-
   const tree = fromMarkdown(content);
 
   const codeBlocks: Code[] = [];

@@ -2,19 +2,20 @@
 
 import { access, constants, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 import Ajv, { ValidateFunction } from 'ajv';
-import type { fromHtml as FromHtmlFunction } from 'hast-util-from-html';
-import type { HTML, Heading } from 'mdast';
-import type { fromMarkdown as FromMarkdownFunction } from 'mdast-util-from-markdown';
-import * as minimist from 'minimist';
-import type { Literal, Node } from 'unist';
-import type { visit as VisitFunction } from 'unist-util-visit';
+import { fromHtml } from 'hast-util-from-html';
+import { fromMarkdown } from 'mdast-util-from-markdown';
+import { visit } from 'unist-util-visit';
 import { URI } from 'vscode-uri';
 import { parseDocument, visit as yamlVisit } from 'yaml';
 
-import { dynamicImport } from '../lib/helpers';
-import { DocsWorkspace } from '../lib/markdown';
+import type { HTML, Heading } from 'mdast';
+import type { Literal, Node } from 'unist';
+
+import { DocsWorkspace } from '../lib/markdown.js';
 
 // "<any char>: <match group>"
 const possibleStringRegex = /^[ \S]+?: *?(\S[ \S]+?)$/gm;
@@ -35,19 +36,19 @@ interface ApiHistory {
 
 interface Options {
   // Check if the API history block is preceded by a heading
-  checkPlacement: boolean;
+  checkPlacement?: boolean;
   // Check if the 'breaking-changes-header' heading id's in the API history block exist in the breaking changes file at this filepath
-  breakingChangesFile: string;
+  breakingChangesFile?: string;
   // Check if the API history block contains strings that might cause issues when parsing the YAML
-  checkStrings: boolean;
+  checkStrings?: boolean;
   // Check if the API history block contains descriptions that aren't surrounded by double quotation marks
-  checkDescriptions: boolean;
+  checkDescriptions?: boolean;
   // Check if the API history block contains comments
-  disallowComments: boolean;
+  disallowComments?: boolean;
   // Array of glob patterns to ignore when processing files
-  ignoreGlobs: string[];
+  ignoreGlobs?: string[];
   // Check if the API history block's YAML adheres to the JSON schema at this filepath
-  schema: string;
+  schema?: string;
 
   // TODO: Implement this when GH_TOKEN isn't needed to fetch PR release versions anymore
   // checkPullRequestLinks: boolean;
@@ -65,12 +66,6 @@ function isHTML(node: Node): node is HTML {
 export async function findPossibleApiHistoryBlocks(
   content: string,
 ): Promise<PossibleHistoryBlock[]> {
-  const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
-    fromMarkdown: typeof FromMarkdownFunction;
-  };
-  const { visit } = (await dynamicImport('unist-util-visit')) as {
-    visit: typeof VisitFunction;
-  };
   const tree = fromMarkdown(content);
   const codeBlocks: PossibleHistoryBlock[] = [];
 
@@ -119,13 +114,6 @@ async function main(
   let warningCounter = 0;
 
   try {
-    const { fromHtml } = (await dynamicImport('hast-util-from-html')) as {
-      fromHtml: typeof FromHtmlFunction;
-    };
-    const { fromMarkdown } = (await dynamicImport('mdast-util-from-markdown')) as {
-      fromMarkdown: typeof FromMarkdownFunction;
-    };
-
     const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
 
     let validateAgainstSchema: ValidateFunction<ApiHistory> | null = null;
@@ -407,47 +395,71 @@ async function main(
 }
 
 function parseCommandLine() {
-  const showUsage = (arg?: string): boolean => {
-    if (!arg || arg.startsWith('-')) {
-      console.log(
-        'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
-          ' [-h|--help]' +
-          ' [--check-placement] [--breaking-changes-file <path>] [--check-strings] [--check-descriptions] [--disallow-comments]' +
-          ' [--schema <path>]' +
-          ' [--ignore <globs>] [--ignore-path <path>]',
-      );
-      process.exit(1);
-    }
-
-    return true;
+  const showUsage = (): never => {
+    console.log(
+      'Usage: lint-roller-markdown-api-history [--root <dir>] <globs>' +
+        ' [-h|--help]' +
+        ' [--check-placement] [--breaking-changes-file <path>] [--check-strings] [--check-descriptions] [--disallow-comments]' +
+        ' [--schema <path>]' +
+        ' [--ignore <globs>] [--ignore-path <path>]',
+    );
+    process.exit(1);
   };
 
-  const opts = minimist(process.argv.slice(2), {
-    boolean: [
-      'help',
-      'check-placement',
-      'check-strings',
-      'check-descriptions',
-      'disallow-comments',
-    ],
-    string: ['root', 'ignore', 'ignore-path', 'schema', 'breaking-changes-file'],
-    unknown: showUsage,
-    default: {
-      'check-placement': true,
-      'check-strings': true,
-      'check-descriptions': true,
-      'disallow-comments': true,
-    },
-  });
+  try {
+    const opts = parseArgs({
+      allowNegative: true,
+      allowPositionals: true,
+      options: {
+        'check-placement': {
+          type: 'boolean',
+          default: true,
+        },
+        'check-strings': {
+          type: 'boolean',
+          default: true,
+        },
+        'check-descriptions': {
+          type: 'boolean',
+          default: true,
+        },
+        'disallow-comments': {
+          type: 'boolean',
+          default: true,
+        },
+        root: {
+          type: 'string',
+        },
+        ignore: {
+          type: 'string',
+          multiple: true,
+        },
+        'ignore-path': {
+          type: 'string',
+        },
+        schema: {
+          type: 'string',
+        },
+        'breaking-changes-file': {
+          type: 'string',
+        },
+        help: {
+          type: 'boolean',
+        },
+      },
+    });
 
-  if (opts.help || !opts._.length) showUsage();
+    if (opts.values.help || !opts.positionals.length) return showUsage();
 
-  return opts;
+    return opts;
+  } catch {
+    return showUsage();
+  }
 }
 
 async function init() {
   try {
-    const opts = parseCommandLine();
+    const { values: opts, positionals } = parseCommandLine();
 
     if (!opts.root) {
       opts.root = '.';
@@ -477,7 +489,7 @@ async function init() {
 
     const { historyBlockCounter, documentCounter, errorCounter, warningCounter } = await main(
       resolve(process.cwd(), opts.root),
-      opts._,
+      positionals,
       {
         checkPlacement: opts['check-placement'],
         breakingChangesFile: opts['breaking-changes-file'],
@@ -500,7 +512,7 @@ async function init() {
   }
 }
 
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   init().catch((error) => {
     console.error(error);
     process.exit(1);

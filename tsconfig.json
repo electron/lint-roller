@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2017",
+    "module": "es2022",
+    "target": "es2022",
     "lib": [
       "DOM",
-      "es2017"
+      "es2022"
     ],
     "sourceMap": true,
     "strict": true,

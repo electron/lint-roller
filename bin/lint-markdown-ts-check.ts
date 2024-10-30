@@ -4,9 +4,9 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
-import * as minimist from 'minimist';
-import { rimraf } from 'rimraf';
 import { URI } from 'vscode-uri';
 
 import {
@@ -16,8 +16,8 @@ import {
   spawnAsync,
   wrapOrphanObjectInParens,
   LintRollerConfig,
-} from '../lib/helpers';
-import { getCodeBlocks, DocsWorkspace } from '../lib/markdown';
+} from '../lib/helpers.js';
+import { getCodeBlocks, DocsWorkspace } from '../lib/markdown.js';
 
 interface Options {
   config?: LintRollerConfig;
@@ -30,7 +30,8 @@ async function typeCheckFiles(
   filenames: string[],
   typings: string[],
 ) {
-  const tscExec = path.join(require.resolve('typescript'), '..', '..', 'bin', 'tsc');
+  const pkgPath = fileURLToPath(import.meta.resolve('typescript'));
+  const tscExec = path.join(pkgPath, '..', '..', 'bin', 'tsc');
   const options = ['--noEmit', '--pretty', '--moduleDetection', 'force'];
   if (filenames.find((filename) => filename.endsWith('.js'))) {
     options.push('--checkJs');
@@ -274,36 +275,52 @@ async function main(
 
     return errors;
   } finally {
-    await rimraf(tempDir);
+    await fs.promises.rm(tempDir, { force: true, recursive: true });
   }
 }
 
 function parseCommandLine() {
-  const showUsage = (arg?: string): boolean => {
-    if (!arg || arg.startsWith('-')) {
-      console.log(
-        'Usage: lint-roller-markdown-ts-check [--root <dir>] <globs> [-h|--help]' +
-          '[--ignore <globs>] [--ignore-path <path>] [--config <path>]',
-      );
-      process.exit(1);
-    }
-
-    return true;
+  const showUsage = (): never => {
+    console.log(
+      'Usage: lint-roller-markdown-ts-check [--root <dir>] <globs> [-h|--help]' +
+        '[--ignore <globs>] [--ignore-path <path>] [--config <path>]',
+    );
+    process.exit(1);
   };
 
-  const opts = minimist(process.argv.slice(2), {
-    boolean: ['help'],
-    string: ['config', 'root', 'ignore', 'ignore-path'],
-    unknown: showUsage,
-  });
+  try {
+    const opts = parseArgs({
+      allowPositionals: true,
+      options: {
+        config: {
+          type: 'string',
+        },
+        root: {
+          type: 'string',
+        },
+        ignore: {
+          type: 'string',
+          multiple: true,
+        },
+        'ignore-path': {
+          type: 'string',
+        },
+        help: {
+          type: 'boolean',
+        },
+      },
+    });
 
-  if (opts.help || !opts._.length) showUsage();
+    if (opts.values.help || !opts.positionals.length) return showUsage();
 
-  return opts;
+    return opts;
+  } catch {
+    return showUsage();
+  }
 }
 
-if (require.main === module) {
-  const opts = parseCommandLine();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const { values: opts, positionals } = parseCommandLine();
 
   if (!opts.root) {
     opts.root = '.';
@@ -327,7 +344,7 @@ if (require.main === module) {
     opts.config ? path.resolve(opts.config) : path.resolve('.lint-roller.json'),
   );
 
-  main(path.resolve(process.cwd(), opts.root), opts._, {
+  main(path.resolve(process.cwd(), opts.root), positionals, {
     config,
     ignoreGlobs: opts.ignore,
   })
