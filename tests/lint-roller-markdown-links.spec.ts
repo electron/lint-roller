@@ -9,7 +9,7 @@ function runLintMarkdownLinks(...args: string[]) {
   return cp.spawnSync(
     process.execPath,
     [path.resolve(__dirname, '../dist/bin/lint-markdown-links.js'), ...args],
-    { stdio: 'pipe' },
+    { stdio: 'pipe', encoding: 'utf-8' },
   );
 }
 
@@ -21,7 +21,7 @@ describe('lint-roller-markdown-links', () => {
       'broken-internal-link.md',
     );
 
-    expect(stdout.toString('utf-8')).toContain('Broken link');
+    expect(stdout).toContain('Broken link');
     expect(status).toEqual(1);
   });
 
@@ -74,7 +74,7 @@ describe('lint-roller-markdown-links', () => {
       'broken-cross-file-link.md',
     );
 
-    expect(stdout.toString('utf-8')).toContain('Broken link');
+    expect(stdout).toContain('Broken link');
     expect(status).toEqual(1);
   });
 
@@ -85,7 +85,7 @@ describe('lint-roller-markdown-links', () => {
       'valid-cross-file-link.md',
     );
 
-    expect(stdout.toString('utf-8')).toEqual(expect.not.stringContaining('Broken link'));
+    expect(stdout).toEqual(expect.not.stringContaining('Broken link'));
     expect(status).toEqual(0);
   });
 
@@ -103,7 +103,7 @@ describe('lint-roller-markdown-links', () => {
       'broken-external-link.md',
     );
 
-    expect(stdout.toString('utf-8')).toContain('Broken link');
+    expect(stdout).toContain('Broken link');
     expect(status).toEqual(1);
   });
 
@@ -116,7 +116,7 @@ describe('lint-roller-markdown-links', () => {
       'redirected-external-link.md',
     );
 
-    expect(stdout.toString('utf-8')).toContain('Link redirection');
+    expect(stdout).toContain('Link redirection');
     expect(status).toEqual(0);
   });
 
@@ -128,7 +128,7 @@ describe('lint-roller-markdown-links', () => {
       '--fetch-external-links',
     );
 
-    expect(stdout.toString('utf-8')).toContain('Broken link');
+    expect(stdout).toContain('Broken link');
     expect(status).toEqual(1);
   });
 
