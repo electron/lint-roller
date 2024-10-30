@@ -58,7 +58,7 @@
     "eslint-plugin-node": "^11.1.0",
     "prettier": "^3.2.5",
     "typescript": "^5.4.5",
-    "vitest": "^1.5.3"
+    "vitest": "^2.1.4"
   },
   "dependencies": {
     "@dsanders11/vscode-markdown-languageservice": "^0.3.0",
