@@ -45,6 +45,9 @@
     "url": "https://github.com/electron/lint-roller/issues"
   },
   "homepage": "https://github.com/electron/lint-roller#readme",
+  "publishConfig": {
+    "provenance": true
+  },
   "devDependencies": {
     "@electron-internal/eslint-config": "^1.0.1",
     "@types/balanced-match": "^1.0.3",
