@@ -24,11 +24,11 @@ async function runMarkdownlint(args: string[], configOptions: Record<string, unk
 
   args.push('--config', configFilePath);
 
-  return cp.spawnSync(
-    process.execPath,
-    [path.resolve(__dirname, '../node_modules/.bin/markdownlint-cli2'), ...args],
-    { stdio: 'pipe', encoding: 'utf-8' },
-  );
+  return cp.spawnSync('npx', ['markdownlint-cli2', ...args], {
+    stdio: 'pipe',
+    encoding: 'utf-8',
+    shell: os.platform() === 'win32',
+  });
 }
 
 describe('markdownlint-cli2', () => {
