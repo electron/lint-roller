@@ -1,4 +1,4 @@
 dist
 node_modules
-markdownlint-rules/emd002.js
-markdownlint-rules/emd003.js
+markdownlint-rules/emd002.cjs
+markdownlint-rules/emd003.cjs
