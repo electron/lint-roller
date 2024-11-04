@@ -1,12 +1,12 @@
-const { addError, filterTokens } = require('markdownlint/helpers');
-
 module.exports = {
   names: ['EMD004', 'no-newline-in-links'],
   description: 'Newlines inside link text',
   tags: ['newline', 'links'],
   parser: 'markdownit',
   function: function EMD004(params, onError) {
-    filterTokens(params, 'inline', (token) => {
+    const tokens = params.parsers.markdownit.tokens.filter((token) => token.type === 'inline');
+
+    for (const token of tokens) {
       const { children } = token;
       let { lineNumber } = token;
       let inLink = false;
@@ -18,13 +18,13 @@ module.exports = {
           inLink = false;
         } else if (type === 'softbreak') {
           if (inLink) {
-            addError(onError, lineNumber);
+            onError({ lineNumber });
             break;
           } else {
             lineNumber++;
           }
         }
       }
-    });
+    }
   },
 };
