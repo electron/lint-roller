@@ -1,5 +1,3 @@
-import { addError, filterTokens } from 'markdownlint/helpers';
-
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { visit } from 'unist-util-visit';
 
@@ -11,7 +9,9 @@ export const tags = ['brackets'];
 const UNESCAPED_REGEX = /(?<!\\)<(?!\s)/g;
 
 function EMD002(params, onError) {
-  filterTokens(params, 'inline', (token) => {
+  const tokens = params.parsers.markdownit.tokens.filter((token) => token.type === 'inline');
+
+  for (const token of tokens) {
     for (const childToken of token.children) {
       // childToken.line has the raw content, but may also contain
       // more content than just childToken.content. Since we need
@@ -41,19 +41,17 @@ function EMD002(params, onError) {
             const matches = rawContent.matchAll(UNESCAPED_REGEX);
 
             for (const match of matches) {
-              addError(
-                onError,
-                childToken.lineNumber,
-                'Unescaped opening angle bracket',
-                undefined,
-                [node.position.start.offset + 1 + match.index, 1],
-              );
+              onError({
+                lineNumber: childToken.lineNumber,
+                detail: 'Unescaped opening angle bracket',
+                range: [node.position.start.offset + 1 + match.index, 1],
+              });
             }
           },
         );
       }
     }
-  });
+  }
 }
 
 export { EMD002 as function };
