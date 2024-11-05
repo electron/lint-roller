@@ -22,9 +22,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "build": "tsc && yarn run build:emd002 && yarn run build:emd003",
-    "build:emd002": "esbuild --platform=node --target=node18 --format=cjs --bundle --outfile=markdownlint-rules/emd002.cjs markdownlint-rules/emd002.mjs",
-    "build:emd003": "esbuild --platform=node --target=node18 --format=cjs --bundle --outfile=markdownlint-rules/emd003.cjs markdownlint-rules/emd003.mjs",
+    "build": "tsc",
     "prepublishOnly": "yarn run build",
     "lint:eslint": "eslint \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
     "lint:eslint:fix": "eslint --fix \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
@@ -54,7 +52,6 @@
     "@types/glob": "^8.1.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "22.8.7",
-    "esbuild": "^0.21.0",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-node": "^11.1.0",

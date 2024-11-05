@@ -18,7 +18,7 @@ async function runMarkdownlint(args: string[], configOptions: Record<string, unk
         extends: path.resolve(__dirname, '../configs/markdownlint.json'),
         ...configOptions,
       },
-      customRules: [path.resolve(__dirname, '../markdownlint-rules/index.cjs')],
+      customRules: [path.resolve(__dirname, '../markdownlint-rules/index.mjs')],
     }),
   );
 
