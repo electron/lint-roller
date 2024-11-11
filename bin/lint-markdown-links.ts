@@ -2,6 +2,8 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 import {
   createLanguageService,
@@ -10,11 +12,10 @@ import {
   ILogger,
   LogLevel,
 } from '@dsanders11/vscode-markdown-languageservice';
-import * as minimist from 'minimist';
 import { CancellationTokenSource } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 
-import { DocsWorkspace, MarkdownLinkComputer, MarkdownParser } from '../lib/markdown';
+import { DocsWorkspace, MarkdownLinkComputer, MarkdownParser } from '../lib/markdown.js';
 
 class NoOpLogger implements ILogger {
   readonly level = LogLevel.Off;
@@ -144,31 +145,50 @@ async function main(
 }
 
 function parseCommandLine() {
-  const showUsage = (arg?: string): boolean => {
-    if (!arg || arg.startsWith('-')) {
-      console.log(
-        'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--fetch-external-links] ' +
-          '[--check-redirects] [--ignore <globs>]',
-      );
-      process.exit(1);
-    }
-
-    return true;
+  const showUsage = (): never => {
+    console.log(
+      'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--fetch-external-links] ' +
+        '[--check-redirects] [--ignore <globs>]',
+    );
+    process.exit(1);
   };
 
-  const opts = minimist(process.argv.slice(2), {
-    boolean: ['help', 'fetch-external-links', 'check-redirects'],
-    string: ['root', 'ignore', 'ignore-path'],
-    unknown: showUsage,
-  });
+  try {
+    const opts = parseArgs({
+      allowPositionals: true,
+      options: {
+        'fetch-external-links': {
+          type: 'boolean',
+        },
+        'check-redirects': {
+          type: 'boolean',
+        },
+        root: {
+          type: 'string',
+        },
+        ignore: {
+          type: 'string',
+          multiple: true,
+        },
+        'ignore-path': {
+          type: 'string',
+        },
+        help: {
+          type: 'boolean',
+        },
+      },
+    });
 
-  if (opts.help || !opts._.length) showUsage();
+    if (opts.values.help || !opts.positionals.length) return showUsage();
 
-  return opts;
+    return opts;
+  } catch {
+    return showUsage();
+  }
 }
 
-if (require.main === module) {
-  const opts = parseCommandLine();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const { values: opts, positionals } = parseCommandLine();
 
   if (!opts.root) {
     opts.root = '.';
@@ -188,7 +208,7 @@ if (require.main === module) {
     }
   }
 
-  main(path.resolve(process.cwd(), opts.root), opts._, {
+  main(path.resolve(process.cwd(), opts.root), positionals, {
     fetchExternalLinks: opts['fetch-external-links'],
     checkRedirects: opts['check-redirects'],
     ignoreGlobs: opts.ignore,

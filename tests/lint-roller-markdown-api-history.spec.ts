@@ -501,8 +501,7 @@ describe('lint-roller-markdown-api-history', () => {
       '--check-placement',
       '--check-strings',
       '--check-descriptions',
-      '--disallow-comments',
-      'false',
+      '--no-disallow-comments',
       '*.md',
     );
 
