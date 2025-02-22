@@ -58,7 +58,7 @@
     "markdownlint-cli2": "^0.14.0",
     "prettier": "^3.2.5",
     "typescript": "^5.4.5",
-    "vitest": "^2.1.4"
+    "vitest": "^3.0.6"
   },
   "dependencies": {
     "@dsanders11/vscode-markdown-languageservice": "^0.3.0",
