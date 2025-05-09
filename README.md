@@ -1,7 +1,7 @@
 # @electron/lint-roller
 
 [![Test](https://github.com/electron/lint-roller/actions/workflows/test.yml/badge.svg)](https://github.com/electron/lint-roller/actions/workflows/test.yml)
-[![npm version](http://img.shields.io/npm/v/@electron/lint-roller.svg)](https://npmjs.org/package/@electron/lint-roller)
+[![npm version](https://img.shields.io/npm/v/@electron/lint-roller.svg)](https://npmjs.org/package/@electron/lint-roller)
 
 > Markdown linting helpers for Electron org repos
 
