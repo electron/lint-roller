@@ -199,38 +199,34 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
     const documentUri = URI.parse(document.uri);
     const links: MdLink[] = [];
 
-    visit(
-      tree,
-      (node) => node.type === 'link',
-      (node: Node) => {
-        const link = node as Link;
-        const href = createHref(documentUri, link.url, this.workspace);
+    visit(tree, 'link', (node: Node) => {
+      const link = node as Link;
+      const href = createHref(documentUri, link.url, this.workspace);
 
-        if (href) {
-          const range = positionToRange(link.position!);
+      if (href) {
+        const range = positionToRange(link.position!);
 
-          // NOTE - These haven't been implemented properly, but their
-          //        values aren't used for the link linting use-case
-          const targetRange = range;
-          const hrefRange = range;
-          const fragmentRange = undefined;
+        // NOTE - These haven't been implemented properly, but their
+        //        values aren't used for the link linting use-case
+        const targetRange = range;
+        const hrefRange = range;
+        const fragmentRange = undefined;
 
-          links.push({
-            kind: MdLinkKind.Link,
-            href,
-            source: {
-              hrefText: link.url,
-              resource: documentUri,
-              range,
-              targetRange,
-              hrefRange,
-              fragmentRange,
-              pathText: link.url.split('#')[0],
-            },
-          });
-        }
-      },
-    );
+        links.push({
+          kind: MdLinkKind.Link,
+          href,
+          source: {
+            hrefText: link.url,
+            resource: documentUri,
+            range,
+            targetRange,
+            hrefRange,
+            fragmentRange,
+            pathText: link.url.split('#')[0],
+          },
+        });
+      }
+    });
 
     return links;
   }
@@ -238,36 +234,32 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
   async #getReferenceLinks(document: ITextDocument, tree: Node): Promise<MdLink[]> {
     const links: MdLink[] = [];
 
-    visit(
-      tree,
-      (node) => ['imageReference', 'linkReference'].includes(node.type),
-      (node: Node) => {
-        const link = node as ImageReference | LinkReference;
-        const range = positionToRange(link.position!);
+    visit(tree, ['imageReference', 'linkReference'], (node: Node) => {
+      const link = node as ImageReference | LinkReference;
+      const range = positionToRange(link.position!);
 
-        // NOTE - These haven't been implemented properly, but their
-        //        values aren't used for the link linting use-case
-        const targetRange = range;
-        const hrefRange = range;
+      // NOTE - These haven't been implemented properly, but their
+      //        values aren't used for the link linting use-case
+      const targetRange = range;
+      const hrefRange = range;
 
-        links.push({
-          kind: MdLinkKind.Link,
-          href: {
-            kind: HrefKind.Reference,
-            ref: link.label!,
-          },
-          source: {
-            hrefText: link.label!,
-            resource: URI.parse(document.uri),
-            range,
-            targetRange,
-            hrefRange,
-            fragmentRange: undefined,
-            pathText: link.label!,
-          },
-        });
-      },
-    );
+      links.push({
+        kind: MdLinkKind.Link,
+        href: {
+          kind: HrefKind.Reference,
+          ref: link.label!,
+        },
+        source: {
+          hrefText: link.label!,
+          resource: URI.parse(document.uri),
+          range,
+          targetRange,
+          hrefRange,
+          fragmentRange: undefined,
+          pathText: link.label!,
+        },
+      });
+    });
 
     return links;
   }
@@ -276,42 +268,38 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
     const documentUri = URI.parse(document.uri);
     const links: MdLink[] = [];
 
-    visit(
-      tree,
-      (node) => node.type === 'definition',
-      (node: Node) => {
-        const definition = node as Definition;
-        const href = createHref(documentUri, definition.url, this.workspace);
+    visit(tree, 'definition', (node: Node) => {
+      const definition = node as Definition;
+      const href = createHref(documentUri, definition.url, this.workspace);
 
-        if (href) {
-          const range = positionToRange(definition.position!);
+      if (href) {
+        const range = positionToRange(definition.position!);
 
-          // NOTE - These haven't been implemented properly, but their
-          //        values aren't used for the link linting use-case
-          const targetRange = range;
-          const hrefRange = range;
-          const fragmentRange = undefined;
+        // NOTE - These haven't been implemented properly, but their
+        //        values aren't used for the link linting use-case
+        const targetRange = range;
+        const hrefRange = range;
+        const fragmentRange = undefined;
 
-          links.push({
-            kind: MdLinkKind.Definition,
-            href,
-            ref: {
-              range,
-              text: definition.label!,
-            },
-            source: {
-              hrefText: definition.url,
-              resource: documentUri,
-              range,
-              targetRange,
-              hrefRange,
-              fragmentRange,
-              pathText: definition.url.split('#')[0],
-            },
-          });
-        }
-      },
-    );
+        links.push({
+          kind: MdLinkKind.Definition,
+          href,
+          ref: {
+            range,
+            text: definition.label!,
+          },
+          source: {
+            hrefText: definition.url,
+            resource: documentUri,
+            range,
+            targetRange,
+            hrefRange,
+            fragmentRange,
+            pathText: definition.url.split('#')[0],
+          },
+        });
+      }
+    });
 
     return links;
   }
@@ -322,13 +310,9 @@ export async function getCodeBlocks(content: string): Promise<Code[]> {
 
   const codeBlocks: Code[] = [];
 
-  visit(
-    tree,
-    (node) => node.type === 'code',
-    (node: Node) => {
-      codeBlocks.push(node as Code);
-    },
-  );
+  visit(tree, 'code', (node: Node) => {
+    codeBlocks.push(node as Code);
+  });
 
   return codeBlocks;
 }
