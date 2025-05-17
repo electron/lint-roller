@@ -12,8 +12,8 @@ import { visit } from 'unist-util-visit';
 import { URI } from 'vscode-uri';
 import { parseDocument, visit as yamlVisit } from 'yaml';
 
-import type { HTML, Heading } from 'mdast';
-import type { Literal, Node } from 'unist';
+import type { Html, Heading } from 'mdast';
+import type { Node } from 'unist';
 
 import { DocsWorkspace } from '../lib/markdown.js';
 
@@ -59,7 +59,7 @@ interface PossibleHistoryBlock {
   value: string;
 }
 
-function isHTML(node: Node): node is HTML {
+function isHTML(node: Node): node is Html {
   return node.type === 'html';
 }
 
@@ -72,14 +72,14 @@ export async function findPossibleApiHistoryBlocks(
   visit(
     tree,
     // Very loose check for YAML history blocks to help catch user error
-    (node): node is HTML =>
+    (node): node is Html =>
       isHTML(node) &&
       node.value.includes('```') &&
       node.value.toLowerCase().includes('yaml') &&
       node.value.toLowerCase().includes('history'),
-    (node: HTML, index) => {
+    (node: Html, index) => {
       codeBlocks.push({
-        previousNode: index !== null ? tree.children[index - 1] : undefined,
+        previousNode: !!index ? tree.children[index - 1] : undefined,
         value: node.value,
       });
     },
@@ -145,7 +145,7 @@ async function main(
           heading.children.reduce(
             (acc, cur) =>
               acc +
-              (cur as Literal<string>).value
+              ('value' in cur ? cur.value : '')
                 .toLowerCase()
                 .replace(/ /g, '-')
                 .replace(/[^a-zA-Z0-9-]/g, ''),
