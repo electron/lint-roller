@@ -319,7 +319,7 @@ function parseCommandLine() {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if ((await fs.promises.realpath(process.argv[1])) === fileURLToPath(import.meta.url)) {
   const { values: opts, positionals } = parseCommandLine();
 
   if (!opts.root) {
