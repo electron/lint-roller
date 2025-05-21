@@ -67,6 +67,7 @@ async function fetchExternalLink(link: string, checkRedirects = false) {
 }
 
 interface Options {
+  allowAbsoluteLinks?: boolean;
   fetchExternalLinks?: boolean;
   checkRedirects?: boolean;
   ignoreGlobs?: string[];
@@ -75,7 +76,12 @@ interface Options {
 async function main(
   workspaceRoot: string,
   globs: string[],
-  { fetchExternalLinks = false, checkRedirects = false, ignoreGlobs = [] }: Options,
+  {
+    allowAbsoluteLinks = false,
+    fetchExternalLinks = false,
+    checkRedirects = false,
+    ignoreGlobs = [],
+  }: Options,
 ) {
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
   const parser = new MarkdownParser();
@@ -95,9 +101,15 @@ async function main(
   try {
     // Collect diagnostics for all documents in the workspace
     for (const document of await workspace.getAllMarkdownDocuments()) {
+      const absoluteLinks = new Set<any>();
+
       for (let link of await languageService.getDocumentLinks(document, cts.token)) {
         if (link.target === undefined) {
           link = (await languageService.resolveDocumentLink(link, cts.token)) ?? link;
+        }
+
+        if (!allowAbsoluteLinks && link.data && link.data.source.hrefText.startsWith('/')) {
+          absoluteLinks.add(link);
         }
 
         if (
@@ -114,7 +126,7 @@ async function main(
         cts.token,
       );
 
-      if (diagnostics.length) {
+      if (diagnostics.length || absoluteLinks.size) {
         console.log(
           'File Location:',
           path.relative(URI.file(workspace.root).path, URI.parse(document.uri).path),
@@ -125,6 +137,14 @@ async function main(
         console.log(
           `\tBroken link on line ${diagnostic.range.start.line + 1}:`,
           diagnostic.message,
+        );
+        errors = true;
+      }
+
+      for (const link of absoluteLinks) {
+        console.log(
+          `\tAbsolute link on line ${link.range.start.line + 1}:`,
+          link.data.source.hrefText,
         );
         errors = true;
       }
@@ -147,8 +167,8 @@ async function main(
 function parseCommandLine() {
   const showUsage = (): never => {
     console.log(
-      'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--fetch-external-links] ' +
-        '[--check-redirects] [--ignore <globs>]',
+      'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--allow-absolute-links]' +
+        '[--fetch-external-links] [--check-redirects] [--ignore <globs>]',
     );
     process.exit(1);
   };
@@ -157,6 +177,9 @@ function parseCommandLine() {
     const opts = parseArgs({
       allowPositionals: true,
       options: {
+        'allow-absolute-links': {
+          type: 'boolean',
+        },
         'fetch-external-links': {
           type: 'boolean',
         },
@@ -209,6 +232,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
 
   main(path.resolve(process.cwd(), opts.root), positionals, {
+    allowAbsoluteLinks: opts['allow-absolute-links'],
     fetchExternalLinks: opts['fetch-external-links'],
     checkRedirects: opts['check-redirects'],
     ignoreGlobs: opts.ignore,

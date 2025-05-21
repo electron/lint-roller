@@ -30,7 +30,7 @@ describe('lint-roller-markdown-links', () => {
       '--root',
       FIXTURES_DIR,
       '--ignore',
-      '**/{{broken,valid}-*-link.md,*angle-brackets.md,api-history-*.md}',
+      '**/{{absolute,broken,valid}-*-link.md,*angle-brackets.md,api-history-*.md}',
       '*.md',
     );
 
@@ -41,6 +41,8 @@ describe('lint-roller-markdown-links', () => {
     const { status } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
+      '--ignore',
+      '**/absolute-internal-link.md',
       '--ignore',
       '**/broken-{external,internal}-link.md',
       '--ignore',
@@ -149,6 +151,28 @@ describe('lint-roller-markdown-links', () => {
       FIXTURES_DIR,
       'twitter-link.md',
       '--fetch-external-links',
+    );
+
+    expect(status).toEqual(0);
+  });
+
+  it('should disallow absolute links by default', () => {
+    const { status, stdout } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      'absolute-internal-link.md',
+    );
+
+    expect(stdout).toContain('Absolute link');
+    expect(status).toEqual(1);
+  });
+
+  it('should allow absolute links by with --allow-absolute-links', () => {
+    const { status } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      'absolute-internal-link.md',
+      '--allow-absolute-links',
     );
 
     expect(status).toEqual(0);
