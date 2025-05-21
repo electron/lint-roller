@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { access, constants, readFile } from 'node:fs/promises';
+import { readFile, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -512,7 +512,7 @@ async function init() {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if ((await realpath(process.argv[1])) === fileURLToPath(import.meta.url)) {
   init().catch((error) => {
     console.error(error);
     process.exit(1);
