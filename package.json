@@ -7,10 +7,10 @@
     "node": ">=20.16.0 || >=22.4.0"
   },
   "bin": {
+    "lint-roller-markdown-api-history": "./dist/bin/lint-markdown-api-history.js",
     "lint-roller-markdown-links": "./dist/bin/lint-markdown-links.js",
     "lint-roller-markdown-standard": "./dist/bin/lint-markdown-standard.js",
-    "lint-roller-markdown-ts-check": "./dist/bin/lint-markdown-ts-check.js",
-    "lint-roller-markdown-api-history": "./dist/bin/lint-markdown-api-history.js"
+    "lint-roller-markdown-ts-check": "./dist/bin/lint-markdown-ts-check.js"
   },
   "files": [
     "configs",
@@ -23,7 +23,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "yarn run build",
+    "prepack": "yarn run build",
     "lint:eslint": "eslint \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
     "lint:eslint:fix": "eslint --fix \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
     "lint:markdown": "yarn run build && markdownlint-cli2 \"*.md\" && node ./dist/bin/lint-markdown-links.js \"*.md\"",
@@ -82,5 +82,6 @@
     "typescript": {
       "optional": true
     }
-  }
+  },
+  "packageManager": "yarn@4.10.3+sha512.c38cafb5c7bb273f3926d04e55e1d8c9dfa7d9c3ea1f36a4868fa028b9e5f72298f0b7f401ad5eb921749eb012eb1c3bb74bf7503df3ee43fd600d14a018266f"
 }
