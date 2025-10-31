@@ -34,6 +34,12 @@ const diagnosticOptions: DiagnosticOptions = {
 };
 
 async function fetchExternalLink(link: string, checkRedirects = false) {
+  const url = new URL(link);
+  if (url.hostname.endsWith('.npmjs.com')) {
+    console.log('Skipping npmjs.com link check', link);
+    return true;
+  }
+
   try {
     const response = await fetch(link, {
       headers: {
