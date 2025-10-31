@@ -156,6 +156,18 @@ describe('lint-roller-markdown-links', () => {
     expect(status).toEqual(0);
   });
 
+  it('should skip npmjs.com links', () => {
+    const { status, stdout } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      'skipped-external-link.md',
+      '--fetch-external-links',
+    );
+
+    expect(status).toEqual(0);
+    expect(stdout).toContain('Skipping');
+  });
+
   it('should disallow absolute links by default', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',
