@@ -189,4 +189,45 @@ describe('lint-roller-markdown-links', () => {
 
     expect(status).toEqual(0);
   });
+
+  it('should flag links outside workspace root as broken by default', () => {
+    const { status, stdout } = runLintMarkdownLinks(
+      '--root',
+      path.resolve(FIXTURES_DIR, 'subdir', 'docs'),
+      'outside-workspace-link.md',
+    );
+
+    expect(stdout).toContain('Broken link');
+    expect(status).toEqual(1);
+  });
+
+  describe('--resource-root', () => {
+    const docsDir = path.resolve(FIXTURES_DIR, 'subdir', 'docs');
+    const subdir = path.resolve(FIXTURES_DIR, 'subdir');
+
+    it('should allow links outside workspace root when --resource-root is set', () => {
+      const { status } = runLintMarkdownLinks(
+        '--root',
+        docsDir,
+        '--resource-root',
+        subdir,
+        'outside-workspace-link.md',
+      );
+
+      expect(status).toEqual(0);
+    });
+
+    it('should flag links outside the resource root as broken', () => {
+      const { status, stdout } = runLintMarkdownLinks(
+        '--root',
+        docsDir,
+        '--resource-root',
+        subdir,
+        'outside-resource-root-link.md',
+      );
+
+      expect(stdout).toContain('Broken link');
+      expect(status).toEqual(1);
+    });
+  });
 });
