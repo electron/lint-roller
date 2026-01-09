@@ -80,6 +80,7 @@ interface Options {
   fetchExternalLinks?: boolean;
   checkRedirects?: boolean;
   ignoreGlobs?: string[];
+  resourceRoot?: string;
 }
 
 async function main(
@@ -90,9 +91,10 @@ async function main(
     fetchExternalLinks = false,
     checkRedirects = false,
     ignoreGlobs = [],
+    resourceRoot,
   }: Options,
 ) {
-  const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
+  const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs, resourceRoot);
   const parser = new MarkdownParser();
   const linkComputer = new MarkdownLinkComputer(workspace);
   const languageService = createLanguageService({
@@ -177,7 +179,7 @@ function parseCommandLine() {
   const showUsage = (): never => {
     console.log(
       'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--allow-absolute-links]' +
-        '[--fetch-external-links] [--check-redirects] [--ignore <globs>]',
+        '[--fetch-external-links] [--check-redirects] [--ignore <globs>] [--resource-root <dir>]',
     );
     process.exit(1);
   };
@@ -196,6 +198,9 @@ function parseCommandLine() {
           type: 'boolean',
         },
         root: {
+          type: 'string',
+        },
+        'resource-root': {
           type: 'string',
         },
         ignore: {
@@ -245,6 +250,9 @@ if ((await fs.promises.realpath(process.argv[1])) === fileURLToPath(import.meta.
     fetchExternalLinks: opts['fetch-external-links'],
     checkRedirects: opts['check-redirects'],
     ignoreGlobs: opts.ignore,
+    resourceRoot: opts['resource-root']
+      ? path.resolve(process.cwd(), opts['resource-root'])
+      : undefined,
   })
     .then((errors) => {
       if (errors) process.exit(1);
