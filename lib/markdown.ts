@@ -85,12 +85,14 @@ export class DocsWorkspace implements IWorkspace {
   readonly root: string;
   readonly globs: string[];
   readonly ignoreGlobs: string[];
+  readonly resourceRoot?: string;
 
-  constructor(root: string, globs: string[], ignoreGlobs: string[] = []) {
+  constructor(root: string, globs: string[], ignoreGlobs: string[] = [], resourceRoot?: string) {
     this.documentCache = new Map();
     this.root = root;
     this.globs = globs;
     this.ignoreGlobs = ignoreGlobs;
+    this.resourceRoot = resourceRoot;
   }
 
   get workspaceFolders() {
@@ -125,6 +127,10 @@ export class DocsWorkspace implements IWorkspace {
     );
   }
 
+  getResourceRootRelativePath(resource: URI) {
+    return path.relative(path.resolve(this.resourceRoot || this.root), resource.fsPath);
+  }
+
   getWorkspaceRelativePath(resource: URI) {
     return path.relative(path.resolve(this.root), resource.fsPath);
   }
@@ -149,12 +155,21 @@ export class DocsWorkspace implements IWorkspace {
   }
 
   async stat(resource: URI): Promise<FileStat | undefined> {
-    if (this.hasMarkdownDocument(resource)) {
-      const stats = fs.statSync(resource.fsPath);
-      return { isDirectory: stats.isDirectory() };
+    if (!this.hasMarkdownDocument(resource)) {
+      // If it's not a markdown document, check if it's within the resource root
+      const relativePath = this.getResourceRootRelativePath(resource);
+
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        return undefined;
+      }
     }
 
-    return undefined;
+    try {
+      const stats = fs.statSync(resource.fsPath);
+      return { isDirectory: stats.isDirectory() };
+    } catch {
+      return undefined;
+    }
   }
 
   async readDirectory(): Promise<Iterable<readonly [string, FileStat]>> {
