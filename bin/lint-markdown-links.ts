@@ -96,7 +96,7 @@ async function main(
 ) {
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs, resourceRoot);
   const parser = new MarkdownParser();
-  const linkComputer = new MarkdownLinkComputer(workspace);
+  const linkComputer = new MarkdownLinkComputer(workspace, resourceRoot);
   const languageService = createLanguageService({
     workspace,
     parser,
