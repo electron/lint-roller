@@ -105,7 +105,7 @@ describe('lint-roller-markdown-links', () => {
       'broken-external-link.md',
     );
 
-    expect(stdout).toContain('Broken link');
+    expect(stdout).toContain('File Location: broken-external-link.md\n\tBroken link on line');
     expect(status).toEqual(1);
   });
 
@@ -130,7 +130,7 @@ describe('lint-roller-markdown-links', () => {
       '--fetch-external-links',
     );
 
-    expect(stdout).toContain('Broken link');
+    expect(stdout).toContain('File Location: broken-external-link.md\n\tBroken link on line');
     expect(status).toEqual(1);
   });
 

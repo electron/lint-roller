@@ -12,7 +12,7 @@ import {
   ILogger,
   LogLevel,
 } from '@dsanders11/vscode-markdown-languageservice';
-import { CancellationTokenSource } from 'vscode-languageserver';
+import { CancellationTokenSource, DocumentLink } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 
 import { DocsWorkspace, MarkdownLinkComputer, MarkdownParser } from '../lib/markdown.js';
@@ -33,7 +33,9 @@ const diagnosticOptions: DiagnosticOptions = {
   validateUnusedLinkDefinitions: DiagnosticLevel.error,
 };
 
-async function fetchExternalLink(link: string, checkRedirects = false) {
+const _externalLinkResults = new Map<string, Response>();
+
+async function fetchExternalLink(link: string, line: number, checkRedirects = false) {
   const url = new URL(link);
   if (url.hostname.endsWith('.npmjs.com')) {
     console.log('Skipping npmjs.com link check', link);
@@ -41,17 +43,20 @@ async function fetchExternalLink(link: string, checkRedirects = false) {
   }
 
   try {
-    const response = await fetch(link, {
-      headers: {
-        'user-agent':
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.39 Electron/29.0.0 Safari/537.36',
-        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'accept-language': 'en-US,en;q=0.5',
-        'accept-encoding': 'gzip, deflate, br',
-      },
-    });
+    const response =
+      _externalLinkResults.get(link) ??
+      (await fetch(link, {
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.39 Electron/29.0.0 Safari/537.36',
+          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'accept-language': 'en-US,en;q=0.5',
+          'accept-encoding': 'gzip, deflate, br',
+        },
+      }));
+    _externalLinkResults.set(link, response);
     if (response.status !== 200) {
-      console.log('Broken link', link, response.status, response.statusText);
+      console.log(`\tBroken link on line ${line}:`, link, response.status, response.statusText);
     } else {
       if (checkRedirects && response.redirected) {
         const wwwUrl = new URL(link);
@@ -69,7 +74,7 @@ async function fetchExternalLink(link: string, checkRedirects = false) {
       return true;
     }
   } catch {
-    console.log('Broken link', link);
+    console.log(`\tBroken link on line ${line}:`, link);
   }
 
   return false;
@@ -107,12 +112,11 @@ async function main(
   const cts = new CancellationTokenSource();
   let errors = false;
 
-  const externalLinks = new Set<string>();
-
   try {
     // Collect diagnostics for all documents in the workspace
     for (const document of await workspace.getAllMarkdownDocuments()) {
-      const absoluteLinks = new Set<any>();
+      const absoluteLinks = new Set<DocumentLink>();
+      const externalLinks = new Set<DocumentLink>();
 
       for (let link of await languageService.getDocumentLinks(document, cts.token)) {
         if (link.target === undefined) {
@@ -128,7 +132,7 @@ async function main(
           link.target.startsWith('http') &&
           new URL(link.target).hostname !== 'localhost'
         ) {
-          externalLinks.add(link.target);
+          externalLinks.add(link);
         }
       }
       const diagnostics = await languageService.computeDiagnostics(
@@ -137,7 +141,7 @@ async function main(
         cts.token,
       );
 
-      if (diagnostics.length || absoluteLinks.size) {
+      if (diagnostics.length || absoluteLinks.size || externalLinks.size) {
         console.log(
           'File Location:',
           path.relative(URI.file(workspace.root).path, URI.parse(document.uri).path),
@@ -159,17 +163,17 @@ async function main(
         );
         errors = true;
       }
+
+      if (fetchExternalLinks) {
+        for (const link of externalLinks) {
+          errors =
+            errors ||
+            !(await fetchExternalLink(link.target!, link.range.start.line + 1, checkRedirects));
+        }
+      }
     }
   } finally {
     cts.dispose();
-  }
-
-  if (fetchExternalLinks) {
-    const externalLinkStates = await Promise.all(
-      Array.from(externalLinks).map((link) => fetchExternalLink(link, checkRedirects)),
-    );
-
-    errors = errors || !externalLinkStates.every((x) => x);
   }
 
   return errors;
