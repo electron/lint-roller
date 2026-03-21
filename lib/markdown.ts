@@ -42,13 +42,30 @@ function createHref(
   sourceDocUri: URI,
   link: string,
   workspace: IWorkspace,
+  resourceRoot?: string,
 ): ExternalHref | InternalHref | undefined {
   if (/^[a-z-][a-z-]+:/i.test(link)) {
     // Looks like a uri
     return { kind: HrefKind.External, uri: URI.parse(tryDecodeUri(link)) };
   }
 
-  const resolved = resolveInternalDocumentLink(sourceDocUri, link, workspace);
+  let resolved = resolveInternalDocumentLink(sourceDocUri, link, workspace);
+
+  // If it's an absolute link that doesn't resolve to a valid path, check if it's within the resource root
+  if (
+    resolved &&
+    !fs.existsSync(resolved.resource.fsPath) &&
+    link.startsWith('/') &&
+    resourceRoot
+  ) {
+    const absolutePath = path.join(resourceRoot, link);
+
+    if (fs.existsSync(absolutePath)) {
+      link = path.relative(path.dirname(sourceDocUri.fsPath), absolutePath);
+      resolved = resolveInternalDocumentLink(sourceDocUri, link, workspace);
+    }
+  }
+
   if (!resolved) {
     return undefined;
   }
@@ -193,9 +210,11 @@ export class DocsWorkspace implements IWorkspace {
 
 export class MarkdownLinkComputer implements IMdLinkComputer {
   private readonly workspace: IWorkspace;
+  private readonly resourceRoot?: string;
 
-  constructor(workspace: IWorkspace) {
+  constructor(workspace: IWorkspace, resourceRoot?: string) {
     this.workspace = workspace;
+    this.resourceRoot = resourceRoot;
   }
 
   async getAllLinks(document: ITextDocument): Promise<MdLink[]> {
@@ -216,7 +235,7 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
 
     visit(tree, ['image', 'link'], (node: Node) => {
       const link = node as Link;
-      const href = createHref(documentUri, link.url, this.workspace);
+      const href = createHref(documentUri, link.url, this.workspace, this.resourceRoot);
 
       if (href) {
         const range = positionToRange(link.position!);
@@ -285,7 +304,7 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
 
     visit(tree, 'definition', (node: Node) => {
       const definition = node as Definition;
-      const href = createHref(documentUri, definition.url, this.workspace);
+      const href = createHref(documentUri, definition.url, this.workspace, this.resourceRoot);
 
       if (href) {
         const range = positionToRange(definition.position!);

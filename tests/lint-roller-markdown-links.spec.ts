@@ -186,7 +186,7 @@ describe('lint-roller-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
-  it('should allow absolute links by with --allow-absolute-links', () => {
+  it('should allow absolute links with --allow-absolute-links', () => {
     const { status } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
@@ -195,6 +195,19 @@ describe('lint-roller-markdown-links', () => {
     );
 
     expect(status).toEqual(0);
+  });
+
+  it('should detect broken absolute links', () => {
+    const { status, stdout, stderr } = runLintMarkdownLinks(
+      '--root',
+      FIXTURES_DIR,
+      '--allow-absolute-links',
+      'subdir/docs/resource-root-absolute-link.md',
+    );
+
+    expect(stderr).toEqual('');
+    expect(stdout).toContain('Broken link');
+    expect(status).toEqual(1);
   });
 
   it('should flag links outside workspace root as broken by default', () => {
@@ -211,6 +224,7 @@ describe('lint-roller-markdown-links', () => {
   describe('--resource-root', () => {
     const docsDir = path.resolve(FIXTURES_DIR, 'subdir', 'docs');
     const subdir = path.resolve(FIXTURES_DIR, 'subdir');
+    const staticDir = path.resolve(FIXTURES_DIR, 'static');
 
     it('should allow links outside workspace root when --resource-root is set', () => {
       const { status } = runLintMarkdownLinks(
@@ -235,6 +249,21 @@ describe('lint-roller-markdown-links', () => {
 
       expect(stdout).toContain('Broken link');
       expect(status).toEqual(1);
+    });
+
+    it('should check for absolute links inside the resource root', () => {
+      const { status, stdout, stderr } = runLintMarkdownLinks(
+        '--root',
+        docsDir,
+        '--allow-absolute-links',
+        '--resource-root',
+        staticDir,
+        'resource-root-absolute-link.md',
+      );
+
+      expect(stderr).toEqual('');
+      expect(stdout).toEqual('');
+      expect(status).toEqual(0);
     });
   });
 });
