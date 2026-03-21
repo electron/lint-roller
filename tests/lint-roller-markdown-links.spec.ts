@@ -44,7 +44,7 @@ describe('lint-roller-markdown-links', () => {
       '--ignore',
       '**/absolute-internal-link.md',
       '--ignore',
-      '**/broken-{external,internal}-link.md',
+      '**/broken-{external,image,internal}-link.md',
       '--ignore',
       '**/{broken,valid}-cross-file-link.md',
       '--ignore',
@@ -89,6 +89,13 @@ describe('lint-roller-markdown-links', () => {
 
     expect(stdout).toEqual(expect.not.stringContaining('Broken link'));
     expect(status).toEqual(0);
+  });
+
+  it('should catch broken image links', () => {
+    const { status, stdout } = runLintMarkdownLinks('--root', FIXTURES_DIR, 'broken-image-link.md');
+
+    expect(stdout).toContain('Broken link');
+    expect(status).toEqual(1);
   });
 
   it('should by default ignore broken external links', () => {

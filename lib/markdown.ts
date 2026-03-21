@@ -214,7 +214,7 @@ export class MarkdownLinkComputer implements IMdLinkComputer {
     const documentUri = URI.parse(document.uri);
     const links: MdLink[] = [];
 
-    visit(tree, 'link', (node: Node) => {
+    visit(tree, ['image', 'link'], (node: Node) => {
       const link = node as Link;
       const href = createHref(documentUri, link.url, this.workspace);
 
