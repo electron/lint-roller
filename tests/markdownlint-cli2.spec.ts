@@ -24,7 +24,7 @@ async function runMarkdownlint(args: string[], configOptions: Record<string, unk
 
   args.push('--config', configFilePath);
 
-  return cp.spawnSync('npx', ['markdownlint-cli2', ...args], {
+  return cp.spawnSync('yarn', ['markdownlint-cli2', ...args], {
     stdio: 'pipe',
     encoding: 'utf-8',
     shell: os.platform() === 'win32',
