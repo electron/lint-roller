@@ -71,7 +71,7 @@ describe('lint-roller-markdown-standard', () => {
 
   it('can fix cleanable errors with --fix option', async () => {
     const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'lint-roller-'));
-    fs.copyFile(path.join(FIXTURES_DIR, 'cleanable.md'), path.join(tmpdir, 'cleanable.md'));
+    await fs.copyFile(path.join(FIXTURES_DIR, 'cleanable.md'), path.join(tmpdir, 'cleanable.md'));
 
     try {
       const { status, stdout } = runLintMarkdownStandard('--fix', '--root', tmpdir, 'cleanable.md');
@@ -89,7 +89,7 @@ describe('lint-roller-markdown-standard', () => {
 
   it('outputs uncleanable errors with --fix option', async () => {
     const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'lint-roller-'));
-    fs.copyFile(path.join(FIXTURES_DIR, 'dirty.md'), path.join(tmpdir, 'dirty.md'));
+    await fs.copyFile(path.join(FIXTURES_DIR, 'dirty.md'), path.join(tmpdir, 'dirty.md'));
 
     try {
       const { status, stdout } = runLintMarkdownStandard('--fix', '--root', tmpdir, 'dirty.md');

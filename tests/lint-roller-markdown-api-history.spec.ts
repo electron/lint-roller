@@ -88,7 +88,7 @@ async function generateRandomApiDocuments(): Promise<GenerateRandomApiDocumentsR
     }
   }
 
-  let generatedDocumentCount = Math.floor(Math.random() * maxDocuments) || 1;
+  const generatedDocumentCount = Math.floor(Math.random() * maxDocuments) || 1;
   let generatedBlockCount = 0;
   let generatedErrorCount = 0;
   let generatedWarningCount = 0;
@@ -491,7 +491,7 @@ describe('lint-roller-markdown-api-history', () => {
       generatedWarningCount,
     } = await generateRandomApiDocuments();
 
-    const { status, stdout, stderr } = runLintMarkdownApiHistory(
+    const { status, stdout } = runLintMarkdownApiHistory(
       '--root',
       tempDocsFolder,
       '--schema',

@@ -1,4 +1,0 @@
-{
-  "extends": ["@electron-internal", "prettier"],
-  "ignorePatterns": ["electron.d.ts"]
-}

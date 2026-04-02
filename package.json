@@ -24,13 +24,13 @@
   "scripts": {
     "build": "tsc",
     "prepack": "yarn run build",
-    "lint:eslint": "eslint \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
-    "lint:eslint:fix": "eslint --fix \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
+    "lint:oxlint": "oxlint --type-aware",
+    "lint:oxlint:fix": "oxlint --type-aware --fix",
     "lint:markdown": "yarn run build && markdownlint-cli2 \"*.md\" && node ./dist/bin/lint-markdown-links.js \"*.md\"",
     "lint:prettier": "prettier --check \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
     "lint:prettier:fix": "prettier --write \"{bin,lib,markdownlint-rules,tests}/**/*.{js,mjs,ts}\"",
-    "lint": "yarn run lint:prettier && yarn run lint:markdown",
-    "lint:fix": "yarn run lint:eslint:fix && yarn run lint:prettier:fix",
+    "lint": "yarn run lint:oxlint && yarn run lint:prettier && yarn run lint:markdown",
+    "lint:fix": "yarn run lint:oxlint:fix && yarn run lint:prettier:fix",
     "test": "yarn run build && vitest run --reporter=verbose"
   },
   "repository": {
@@ -47,15 +47,13 @@
     "provenance": true
   },
   "devDependencies": {
-    "@electron-internal/eslint-config": "^1.0.1",
     "@types/balanced-match": "^3.0.2",
     "@types/glob": "^8.1.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "22.8.7",
-    "eslint": "^8.54.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-node": "^11.1.0",
     "markdownlint-cli2": "^0.18.0",
+    "oxlint": "^1.57.0",
+    "oxlint-tsgolint": "^0.17.4",
     "prettier": "^3.2.5",
     "typescript": "^5.4.5",
     "vitest": "^4.1.1"

@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-var": "error",
+    "eqeqeq": "error",
+    "guard-for-in": "error",
+    "prefer-const": ["error", { "destructuring": "all" }],
+    "no-unused-vars": ["error", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
+    "import/no-absolute-path": "error",
+    "import/no-webpack-loader-syntax": "error"
+  },
+  "ignorePatterns": ["electron.d.ts"]
+}
