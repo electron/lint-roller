@@ -5,7 +5,7 @@ import * as os from 'node:os';
 import { range as balancedRange } from 'balanced-match';
 
 // Helper function to work around import issues with ESM module
-// eslint-disable-next-line no-new-func
+// oxlint-disable-next-line no-new-func, typescript-eslint(no-implied-eval)
 export const dynamicImport = new Function('specifier', 'return import(specifier)');
 
 // From zeke/standard-markdown
@@ -27,7 +27,7 @@ export type SpawnAsyncResult = {
 export async function spawnAsync(
   command: string,
   args: string[],
-  options?: childProcess.SpawnOptionsWithoutStdio | undefined,
+  options?: childProcess.SpawnOptionsWithoutStdio,
 ): Promise<SpawnAsyncResult> {
   return new Promise((resolve, reject) => {
     try {

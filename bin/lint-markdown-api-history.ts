@@ -79,7 +79,7 @@ export async function findPossibleApiHistoryBlocks(
       node.value.toLowerCase().includes('history'),
     (node: Html, index) => {
       codeBlocks.push({
-        previousNode: !!index ? tree.children[index - 1] : undefined,
+        previousNode: index ? tree.children[index - 1] : undefined,
         value: node.value,
       });
     },
@@ -124,7 +124,7 @@ async function main(
         const ApiHistorySchemaFile = await readFile(schema, { encoding: 'utf-8' });
         const ApiHistorySchema = JSON.parse(ApiHistorySchemaFile);
         validateAgainstSchema = ajv.compile<ApiHistory>(ApiHistorySchema);
-      } catch (error) {
+      } catch (error: any) {
         throw new Error(
           `Error occurred while attempting to read API history schema and compile AJV validator:\n${error}\n`,
         );
@@ -152,7 +152,7 @@ async function main(
             '',
           ),
         );
-      } catch (error) {
+      } catch (error: any) {
         throw new Error(
           `Error occurred while attempting to read breaking changes file and parse the heading IDs:\n${error}\n`,
         );
@@ -287,7 +287,7 @@ async function main(
         try {
           unsafeHistoryDocument = parseDocument(codeBlock.value);
           unsafeHistory = unsafeHistoryDocument.toJS();
-        } catch (error) {
+        } catch (error: any) {
           console.error(
             'Error occurred while parsing Markdown document:\n\n' +
               `'${filepath}'\n\n` +
@@ -389,9 +389,9 @@ async function main(
   } catch (error) {
     errorCounter++;
     console.error('Error occurred while linting:\n', error);
-  } finally {
-    return { historyBlockCounter, documentCounter, errorCounter, warningCounter };
   }
+
+  return { historyBlockCounter, documentCounter, errorCounter, warningCounter };
 }
 
 function parseCommandLine() {
@@ -506,7 +506,7 @@ async function init() {
     );
 
     if (errorCounter > 0) process.exit(1);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error(s) occurred while initializing 'lint-markdown-api-history':\n${error}`);
     process.exit(1);
   }
