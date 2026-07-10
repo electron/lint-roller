@@ -1,4 +1,7 @@
 import * as cp from 'node:child_process';
+import * as fs from 'node:fs/promises';
+import * as http from 'node:http';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -10,6 +13,27 @@ function runLintMarkdownLinks(...args: string[]) {
     process.execPath,
     [path.resolve(__dirname, '../dist/bin/lint-markdown-links.js'), ...args],
     { stdio: 'pipe', encoding: 'utf-8' },
+  );
+}
+
+// Async variant which doesn't block the event loop, so that an
+// in-process HTTP server can respond while the CLI runs
+function runLintMarkdownLinksAsync(...args: string[]) {
+  return new Promise<{ status: number | null; stdout: string; stderr: string }>(
+    (resolve, reject) => {
+      const child = cp.spawn(
+        process.execPath,
+        [path.resolve(__dirname, '../dist/bin/lint-markdown-links.js'), ...args],
+        { stdio: 'pipe' },
+      );
+
+      let stdout = '';
+      let stderr = '';
+      child.stdout.setEncoding('utf-8').on('data', (data) => (stdout += data));
+      child.stderr.setEncoding('utf-8').on('data', (data) => (stderr += data));
+      child.on('error', reject);
+      child.on('close', (status) => resolve({ status, stdout, stderr }));
+    },
   );
 }
 
@@ -116,17 +140,45 @@ describe('lint-roller-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
-  it('can warn about redirected external links with --check-redirects', () => {
-    const { status, stdout } = runLintMarkdownLinks(
-      '--root',
-      FIXTURES_DIR,
-      '--fetch-external-links',
-      '--check-redirects',
-      'redirected-external-link.md',
-    );
+  it('can warn about redirected external links with --check-redirects', async () => {
+    const server = http.createServer((req, res) => {
+      if (req.url === '/old') {
+        res.writeHead(307, { location: '/new' });
+        res.end();
+      } else {
+        res.writeHead(200, { 'content-type': 'text/html' });
+        res.end('<html></html>');
+      }
+    });
 
-    expect(stdout).toContain('Link redirection');
-    expect(status).toEqual(0);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as import('node:net').AddressInfo;
+
+    const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'lint-roller-'));
+
+    try {
+      await fs.writeFile(
+        path.join(tmpdir, 'redirected-external-link.md'),
+        `# Redirected External Link\n\n[redirected](http://127.0.0.1:${port}/old)\n`,
+      );
+
+      const { status, stdout } = await runLintMarkdownLinksAsync(
+        '--root',
+        tmpdir,
+        '--fetch-external-links',
+        '--check-redirects',
+        'redirected-external-link.md',
+      );
+
+      expect(stdout).toContain('Link redirection');
+      expect(stdout).toContain(`http://127.0.0.1:${port}/old -> http://127.0.0.1:${port}/new`);
+      expect(status).toEqual(0);
+    } finally {
+      await fs.rm(tmpdir, { recursive: true, force: true });
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+    }
   });
 
   it('should accept options after the globs', () => {
@@ -161,6 +213,88 @@ describe('lint-roller-markdown-links', () => {
     );
 
     expect(status).toEqual(0);
+  });
+
+  it('should retry failed external link fetches', { timeout: 30_000 }, async () => {
+    let requestCount = 0;
+    const server = http.createServer((req, res) => {
+      requestCount++;
+      if (requestCount <= 2) {
+        req.socket.destroy();
+      } else {
+        res.writeHead(200, { 'content-type': 'text/html' });
+        res.end('<html></html>');
+      }
+    });
+
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as import('node:net').AddressInfo;
+
+    const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'lint-roller-'));
+
+    try {
+      await fs.writeFile(
+        path.join(tmpdir, 'flaky-external-link.md'),
+        `# Flaky External Link\n\n[flaky](http://127.0.0.1:${port}/flaky)\n`,
+      );
+
+      const { status, stdout } = await runLintMarkdownLinksAsync(
+        '--root',
+        tmpdir,
+        '--fetch-external-links',
+        'flaky-external-link.md',
+      );
+
+      expect(stdout).toEqual(expect.not.stringContaining('Broken link'));
+      expect(status).toEqual(0);
+      expect(requestCount).toBeGreaterThanOrEqual(3);
+    } finally {
+      await fs.rm(tmpdir, { recursive: true, force: true });
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+    }
+  });
+
+  it('should retry external link fetches that hang', { timeout: 30_000 }, async () => {
+    let requestCount = 0;
+    const server = http.createServer((req, res) => {
+      requestCount++;
+      if (requestCount > 1) {
+        res.writeHead(200, { 'content-type': 'text/html' });
+        res.end('<html></html>');
+      }
+      // On the first request, hold the socket open without responding
+    });
+
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as import('node:net').AddressInfo;
+
+    const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'lint-roller-'));
+
+    try {
+      await fs.writeFile(
+        path.join(tmpdir, 'hanging-external-link.md'),
+        `# Hanging External Link\n\n[hanging](http://127.0.0.1:${port}/hanging)\n`,
+      );
+
+      const { status, stdout } = await runLintMarkdownLinksAsync(
+        '--root',
+        tmpdir,
+        '--fetch-external-links',
+        'hanging-external-link.md',
+      );
+
+      expect(stdout).toEqual(expect.not.stringContaining('Broken link'));
+      expect(status).toEqual(0);
+      expect(requestCount).toBeGreaterThanOrEqual(2);
+    } finally {
+      await fs.rm(tmpdir, { recursive: true, force: true });
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+    }
   });
 
   it('should skip npmjs.com links', () => {

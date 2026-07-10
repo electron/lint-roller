@@ -12,6 +12,7 @@ import {
   ILogger,
   LogLevel,
 } from '@dsanders11/vscode-markdown-languageservice';
+import { Agent, fetch } from 'undici';
 import { CancellationTokenSource } from 'vscode-languageserver';
 import { URI } from 'vscode-uri';
 
@@ -33,6 +34,54 @@ const diagnosticOptions: DiagnosticOptions = {
   validateUnusedLinkDefinitions: DiagnosticLevel.error,
 };
 
+const fetchDispatcher = new Agent({
+  connectTimeout: 5_000,
+  headersTimeout: 10_000,
+  bodyTimeout: 10_000,
+});
+
+const retryBackoffsMs = [500, 1_000, 2_000];
+
+async function fetchWithRetry(link: string) {
+  let lastError: unknown;
+  let lastResponse: Awaited<ReturnType<typeof fetch>> | undefined;
+
+  for (let attempt = 0; attempt <= retryBackoffsMs.length; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, retryBackoffsMs[attempt - 1]));
+    }
+
+    try {
+      const response = await fetch(link, {
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.39 Electron/29.0.0 Safari/537.36',
+          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'accept-language': 'en-US,en;q=0.5',
+          'accept-encoding': 'gzip, deflate, br',
+        },
+        dispatcher: fetchDispatcher,
+        // Hard per-attempt wall-clock abort, since the dispatcher's
+        // idle-based timeouts don't catch slow-drip or redirect stalls
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (response.status !== 429 && response.status < 500) {
+        return response;
+      }
+
+      lastResponse = response;
+      lastError = undefined;
+    } catch (error) {
+      lastError = error;
+      lastResponse = undefined;
+    }
+  }
+
+  if (lastResponse !== undefined) return lastResponse;
+  throw lastError;
+}
+
 async function fetchExternalLink(link: string, checkRedirects = false) {
   const url = new URL(link);
   if (url.hostname.endsWith('.npmjs.com')) {
@@ -41,15 +90,7 @@ async function fetchExternalLink(link: string, checkRedirects = false) {
   }
 
   try {
-    const response = await fetch(link, {
-      headers: {
-        'user-agent':
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.39 Electron/29.0.0 Safari/537.36',
-        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'accept-language': 'en-US,en;q=0.5',
-        'accept-encoding': 'gzip, deflate, br',
-      },
-    });
+    const response = await fetchWithRetry(link);
     if (response.status !== 200) {
       console.log('Broken link', link, response.status, response.statusText);
     } else {
