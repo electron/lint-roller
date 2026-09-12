@@ -204,8 +204,8 @@ describe('lint-roller-markdown-links', () => {
     expect(status).toEqual(0);
   });
 
-  it('should be able to fetch twitter links', () => {
-    const { status } = runLintMarkdownLinks(
+  it('should skip twitter links', () => {
+    const { status, stdout } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
       'twitter-link.md',
@@ -213,6 +213,7 @@ describe('lint-roller-markdown-links', () => {
     );
 
     expect(status).toEqual(0);
+    expect(stdout).toContain('Skipping');
   });
 
   it('should retry failed external link fetches', { timeout: 30_000 }, async () => {

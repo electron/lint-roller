@@ -82,10 +82,19 @@ async function fetchWithRetry(link: string) {
   throw lastError;
 }
 
+// Hosts whose links are not fetched. X (twitter.com/x.com) blocks automated
+// fetches, so its links can't be verified.
+const SKIPPED_HOSTS = ['npmjs.com', 'twitter.com', 'x.com'];
+
+function getSkippedHost(hostname: string) {
+  return SKIPPED_HOSTS.find((host) => hostname === host || hostname.endsWith(`.${host}`));
+}
+
 async function fetchExternalLink(link: string, checkRedirects = false) {
   const url = new URL(link);
-  if (url.hostname.endsWith('.npmjs.com')) {
-    console.log('Skipping npmjs.com link check', link);
+  const skippedHost = getSkippedHost(url.hostname);
+  if (skippedHost) {
+    console.log(`Skipping ${skippedHost} link check`, link);
     return true;
   }
 
