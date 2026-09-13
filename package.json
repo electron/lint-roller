@@ -67,7 +67,7 @@
     "markdown-it": "^14.1.0",
     "mdast-util-from-markdown": "^2.0.2",
     "standard": "^17.0.0",
-    "undici": "^7.28.0",
+    "undici": "^7.29.0",
     "unist-util-visit": "^5.0.0",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8",
