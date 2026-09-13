@@ -1,0 +1,182 @@
+name: Canary External Links
+
+# Debugging scaffolding for the intermittent hang fetching
+# https://www.electronjs.org/docs/api/browser-window from GitHub-hosted
+# runners, observed only when the runner lands in Azure westcentralus.
+# Samples runners over time, records the runner's Azure region, and captures
+# per-phase timings for three client shapes so the next occurrence shows
+# exactly which phase stalls. Safe to delete once the question is answered.
+#
+# Note: GitHub only honors `schedule` and `workflow_dispatch` for workflow
+# files on the default branch, so those triggers are inert until this lands
+# on main. The `pull_request` trigger lets it sample runners from the PR in
+# the meantime (re-run it from the checks UI for more draws).
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 * * * *'
+
+permissions: {}
+
+concurrency:
+  group: "canary-external-links-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: "Probe (${{ matrix.sample }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        sample:
+          - sample-1
+          - sample-2
+          - sample-3
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Record Azure region
+        run: |
+          region="$(curl -s -m 5 -H "Metadata: true" "http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text" || true)"
+          if [ -z "$region" ]; then
+            region="unknown (IMDS unavailable; see the 'Azure Region:' line in the 'Runner Image Provisioner' banner at the top of this job's log)"
+          fi
+          echo "Azure region: $region"
+          {
+            echo "## External link canary"
+            echo ""
+            echo "**Azure region:** \`$region\`"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Probe external link
+        env:
+          TARGET_URL: 'https://www.electronjs.org/docs/api/browser-window'
+          ITERATIONS: '20'
+          # Stop iterating after 45 minutes so the step summary is always
+          # written even if every probe hits its 75s ceiling.
+          TIME_BUDGET_SECONDS: '2700'
+          # Exact header set sent by bin/lint-markdown-links.ts
+          LINT_USER_AGENT: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.39 Electron/29.0.0 Safari/537.36'
+          LINT_ACCEPT: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+          LINT_ACCEPT_LANGUAGE: 'en-US,en;q=0.5'
+          LINT_ACCEPT_ENCODING: 'gzip, deflate, br'
+          NODE_PROBE_SCRIPT: |
+            const start = Date.now();
+            const headers = {
+              'user-agent': process.env.LINT_USER_AGENT,
+              accept: process.env.LINT_ACCEPT,
+              'accept-language': process.env.LINT_ACCEPT_LANGUAGE,
+              'accept-encoding': process.env.LINT_ACCEPT_ENCODING,
+            };
+            try {
+              const response = await fetch(process.env.TARGET_URL, {
+                headers,
+                redirect: 'follow',
+                signal: AbortSignal.timeout(75_000),
+              });
+              await response.arrayBuffer();
+              console.log(`elapsed_ms=${Date.now() - start} status=${response.status} url=${response.url}`);
+            } catch (err) {
+              console.log(`elapsed_ms=${Date.now() - start} error=${err.name}: ${err.message}`);
+              process.exitCode = 1;
+            }
+        run: |
+          slow_log="$RUNNER_TEMP/slow-samples.log"
+          : > "$slow_log"
+          loop_start="$(date +%s)"
+
+          # Runs one curl probe, printing a one-line timing summary. The full
+          # `--trace-time -v` output is kept (job log + slow sample log) only
+          # when the probe errored or total exceeded 5 seconds.
+          run_curl_probe() {
+            local label="$1"
+            shift
+            local trace_file timing rc total
+            trace_file="$(mktemp)"
+            set +e
+            timing="$(curl -sS -o /dev/null -L --trace-time -v --max-time 75 \
+              -w 'dns=%{time_namelookup} tcp=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer} redirect=%{time_redirect} total=%{time_total} status=%{http_code} http=%{http_version} ip=%{remote_ip}' \
+              "$@" "$TARGET_URL" 2>"$trace_file")"
+            rc=$?
+            set -e
+            total="$(printf '%s' "$timing" | grep -oE 'total=[0-9.]+' | head -n1 | cut -d= -f2 || true)"
+            echo "[iter $iter][$label] ${timing:-no-timing-output} rc=$rc"
+            if [ "$rc" -ne 0 ] || awk -v t="${total:-0}" 'BEGIN { exit !(t > 5) }'; then
+              {
+                echo "==== slow sample: iter $iter, probe $label, total=${total:-n/a}s, rc=$rc ===="
+                cat "$trace_file"
+                echo ""
+              } | tee -a "$slow_log"
+            fi
+            rm -f "$trace_file"
+            if [ "$rc" -eq 0 ]; then
+              probe_result="${total:-?}s"
+            else
+              probe_result="err rc=$rc (total=${total:-?}s)"
+            fi
+          }
+
+          run_node_probe() {
+            local out rc elapsed
+            set +e
+            out="$(node --input-type=module -e "$NODE_PROBE_SCRIPT" 2>&1)"
+            rc=$?
+            set -e
+            echo "[iter $iter][node-fetch] ${out:-no-output} rc=$rc"
+            elapsed="$(printf '%s' "$out" | grep -oE 'elapsed_ms=[0-9]+' | head -n1 | cut -d= -f2 || true)"
+            if [ "$rc" -ne 0 ] || [ -z "$elapsed" ] || [ "$elapsed" -gt 5000 ]; then
+              echo "==== slow sample: iter $iter, probe node-fetch, rc=$rc: $out" >> "$slow_log"
+            fi
+            if [ "$rc" -eq 0 ]; then
+              probe_result="${elapsed:-?}ms"
+            else
+              probe_result="err rc=$rc (${elapsed:-?}ms)"
+            fi
+          }
+
+          {
+            echo "### Probe timings (target: $TARGET_URL)"
+            echo ""
+            echo "| iteration | curl (HTTP/2, curl UA) | curl (HTTP/1.1, lint-markdown-links headers) | node fetch (lint-markdown-links headers) |"
+            echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          iter=1
+          while [ "$iter" -le "$ITERATIONS" ]; do
+            if [ "$(( $(date +%s) - loop_start ))" -ge "$TIME_BUDGET_SECONDS" ]; then
+              echo "Time budget exhausted after $((iter - 1)) iterations; stopping early."
+              break
+            fi
+            run_curl_probe curl-h2
+            curl_h2_result="$probe_result"
+            run_curl_probe curl-h1.1-lint-headers --http1.1 \
+              -H "user-agent: $LINT_USER_AGENT" \
+              -H "accept: $LINT_ACCEPT" \
+              -H "accept-language: $LINT_ACCEPT_LANGUAGE" \
+              -H "accept-encoding: $LINT_ACCEPT_ENCODING"
+            curl_h11_result="$probe_result"
+            run_node_probe
+            node_result="$probe_result"
+            echo "| $iter | $curl_h2_result | $curl_h11_result | $node_result |" >> "$GITHUB_STEP_SUMMARY"
+            iter=$((iter + 1))
+          done
+
+          {
+            echo ""
+            if [ -s "$slow_log" ]; then
+              echo "<details><summary>Slow samples (probe error or total &gt; 5s)</summary>"
+              echo ""
+              echo '```text'
+              head -c 786432 "$slow_log"
+              echo '```'
+              echo ""
+              echo "</details>"
+            else
+              echo "No slow samples (every probe completed in 5s or less)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Canary never fails on probe errors; the data is the point.
+          exit 0

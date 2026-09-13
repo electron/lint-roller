@@ -19,7 +19,7 @@ jobs:
       matrix:
         node-version:
           - '22.15'
-          - '20.16'
+          - '20.18.1'
         os:
           - macos-latest
           - ubuntu-latest
