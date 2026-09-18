@@ -30,11 +30,21 @@ async function typeCheckFiles(
   filenames: string[],
   typings: string[],
 ) {
-  const pkgPath = fileURLToPath(import.meta.resolve('typescript'));
-  const tscExec = path.join(pkgPath, '..', '..', 'bin', 'tsc');
-  const options = ['--noEmit', '--pretty', '--moduleDetection', 'force'];
+  const pkgJsonPath = fileURLToPath(import.meta.resolve('typescript/package.json'));
+  const tscExec = path.join(path.dirname(pkgJsonPath), 'bin', 'tsc');
+  // Code blocks have always been checked with `strict` off; TypeScript 6
+  // flipped the default, so pin it to keep results the same across versions.
+  const options = ['--noEmit', '--pretty', '--moduleDetection', 'force', '--strict', 'false'];
   if (filenames.find((filename) => filename.endsWith('.js'))) {
     options.push('--checkJs');
+  }
+  const { version } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+  if (parseInt(version.split('.')[0], 10) >= 6) {
+    // TypeScript 6+ refuses to compile files passed on the command line when a
+    // tsconfig.json is reachable from the working directory unless told to
+    // ignore it, and no longer includes every node_modules/@types package by
+    // default; '*' restores that so blocks can keep using e.g. Node.js globals.
+    options.push('--ignoreConfig', '--types', '*');
   }
   const args = [tscExec, ...options, ...typings, ...filenames];
   const { status, stderr, stdout } = await spawnAsync(process.execPath, args);
