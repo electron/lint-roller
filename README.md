@@ -25,8 +25,7 @@ across repos. To use the base config, extend it in `.markdownlint.json`:
 ```
 
 `lint-roller-markdown-links` is a command to further lint links to find
-broken relative links, including URL fragments, and can also be used to
-check external links with the `--fetch-external-links` option.
+broken relative links, including URL fragments.
 
 `lint-roller-markdown-oxlint` is a command to lint JS code blocks in Markdown
 with `oxlint`, using the project's own `oxlint` installation and config
