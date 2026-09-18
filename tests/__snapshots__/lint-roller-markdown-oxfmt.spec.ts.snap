@@ -93,8 +93,9 @@ exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading p
          34:1:     Code block is not formatted (oxfmt)
          39:3:     Code block is not formatted (oxfmt)
          45:1:     Code block is not formatted (oxfmt)
+         66:1:     Code block is not formatted (oxfmt)
 
-There are 4 errors in '<root>'
+There are 5 errors in '<root>'
 "
 `;
 
@@ -159,6 +160,13 @@ Empty and single-line literals:
 \`\`\`js
 { compare: left == right }
 \`\`\`
+
+Two object literals in one block:
+
+\`\`\`js
+{ label: 'first' }
+{ label: 'second', used: first == second }
+\`\`\`
 "
 `;
 
@@ -167,7 +175,8 @@ exports[`lint-roller-markdown-oxfmt > reports code blocks which cannot be parsed
    unparseable.md
          9:8:      Expected \`,\` or \`}\` but found \`.\` (oxfmt)
          15:8:     Unexpected token (oxfmt)
+         22:9:     Unexpected token (oxfmt)
 
-There are 2 errors in '<root>'
+There are 3 errors in '<root>'
 "
 `;

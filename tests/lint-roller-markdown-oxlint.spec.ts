@@ -153,7 +153,7 @@ describe('lint-roller-markdown-oxlint', () => {
         await fs.readFile(path.join(tmpdir, 'edge-cases.md'), { encoding: 'utf-8' }),
       ).toMatchSnapshot();
       expect(stdout).toContain('File has changed: edge-cases.md');
-      expect(stdout).toContain('There are 1 errors');
+      expect(stdout).toContain('There are 2 errors');
       expect(status).toEqual(1);
     });
   });

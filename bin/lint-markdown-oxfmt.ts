@@ -9,12 +9,13 @@ import type { FormatConfig } from 'oxfmt';
 
 import {
   findCodeBlocks,
+  findOrphanObjects,
   writeCodeBlockChanges,
   JS_LANGS,
   Problems,
   TS_LANGS,
 } from '../lib/code-blocks.js';
-import type { CodeBlock } from '../lib/code-blocks.js';
+import type { CodeBlock, LineRange, Problem } from '../lib/code-blocks.js';
 import { parseJSONC } from '../lib/helpers.js';
 import { DocsWorkspace } from '../lib/markdown.js';
 
@@ -25,6 +26,65 @@ interface Options {
 }
 
 type Oxfmt = typeof import('oxfmt');
+
+// With "semi: false" style the formatter guards a statement starting with a
+// paren, bracket, backtick, or such with a leading semicolon, which is just
+// noise on the first statement (after any comments) of a documentation snippet
+const LEADING_SEMICOLON_GUARD = /^((?:[ \t]*(?:\/\/.*|\/\*(?:[^*]|\*(?!\/))*\*\/[ \t]*)?\n)*);/;
+
+function stripLeadingSemicolonGuard(formatted: string, original: string): string {
+  return LEADING_SEMICOLON_GUARD.test(original)
+    ? formatted
+    : formatted.replace(LEADING_SEMICOLON_GUARD, '$1');
+}
+
+interface Segment {
+  text: string;
+  /** 0-based line the segment starts on */
+  line: number;
+  isOrphanObject: boolean;
+  blankLineBefore: boolean;
+}
+
+/**
+ * Splits code up into the given bare object literals and the runs of code
+ * around them so that each can be formatted separately
+ */
+function splitIntoSegments(text: string, orphans: LineRange[]): Segment[] {
+  const lines = text.split('\n');
+  const segments: Segment[] = [];
+  const pushSegment = (start: number, end: number, isOrphanObject: boolean) => {
+    segments.push({
+      text: lines.slice(start, end + 1).join('\n'),
+      line: start,
+      isOrphanObject,
+      blankLineBefore: start > 0 && !lines[start - 1].trim(),
+    });
+  };
+  let cursor = 0;
+
+  for (const orphan of [...orphans, { start: lines.length, end: lines.length }]) {
+    let start = cursor;
+    let end = orphan.start - 1;
+
+    // Drop blank lines at either end of a run of code like the formatter
+    // would, one is put back between segments if there were any
+    while (start <= end && !lines[start].trim()) start++;
+    while (end >= start && !lines[end].trim()) end--;
+
+    if (start <= end) {
+      pushSegment(start, end, false);
+    }
+
+    if (orphan.start < lines.length) {
+      pushSegment(orphan.start, orphan.end, true);
+    }
+
+    cursor = orphan.end + 1;
+  }
+
+  return segments;
+}
 
 async function loadOxfmt(): Promise<Oxfmt> {
   try {
@@ -66,6 +126,10 @@ async function loadConfig(
     throw new Error(`Could not parse oxfmt config at ${resolved}`, { cause });
   }
 
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+    throw new Error(`Invalid oxfmt config at ${resolved}: expected an object`);
+  }
+
   // These only make sense when oxfmt is discovering files itself
   delete config.$schema;
   delete config.ignorePatterns;
@@ -105,84 +169,130 @@ async function main(
   const problems = new Problems();
   const changes = new Map<CodeBlock, string>();
 
-  for (const block of await findCodeBlocks(workspace, [...JS_LANGS, ...TS_LANGS], problems)) {
+  const formatBlock = async (
+    block: CodeBlock,
+  ): Promise<{ problem: Problem } | { formatted: string } | undefined> => {
     const { value } = block;
     const fileName = `code-block.${block.ext}`;
+    const format = (text: string) => oxfmt.format(fileName, `${text}\n`, formatConfig);
 
-    // Blank lines just inside the code fences are dropped when formatting
-    const leadingBlankLines = /^\s*/.exec(value)![0].split('\n').length - 1;
+    // Whitespace just inside the code fences is dropped when formatting,
+    // but is needed to map parse errors back to their original position
+    const leadingWhitespace = /^\s*/.exec(value)![0];
+    const leadingBlankLines = leadingWhitespace.split('\n').length - 1;
+    const firstLineIndent = leadingWhitespace.length - leadingWhitespace.lastIndexOf('\n') - 1;
     const body = value.trim();
 
-    // A code block which is just an object (or array) literal needs to be
-    // wrapped in parens so that it parses as an expression rather than a
-    // block statement, but fall back to formatting it as-is if that fails
-    // since code with a leading array literal can look the same
-    let isOrphanObject = /^[[{][\s\S]*[\]}]$/.test(body);
-    let result = await oxfmt.format(
-      fileName,
-      `${isOrphanObject ? `(${body})` : body}\n`,
-      formatConfig,
-    );
+    // Bare object literals need to be wrapped in parens to be parsed as an
+    // expression, and the only sure way to find that wrapping in formatted
+    // output to undo it is for it to be the whole output, so format those
+    // separately from the code around them and stitch it all back together
+    const orphans = findOrphanObjects(body);
+    let formatted: string | undefined;
+    let error: { position: { line: number; column: number }; message: string } | undefined;
 
-    if (isOrphanObject && result.errors.length) {
-      isOrphanObject = false;
-      result = await oxfmt.format(fileName, `${body}\n`, formatConfig);
+    if (orphans.length) {
+      const parts: string[] = [];
+
+      for (const segment of splitIntoSegments(body, orphans)) {
+        const { text, isOrphanObject, blankLineBefore } = segment;
+        const result = await format(isOrphanObject ? `(${text})` : text);
+
+        // Finding them is only a heuristic which might have made matters
+        // worse by splitting mid-statement, so fall back to formatting as-is
+        // but hang on to this (likely more accurate) error in case that fails
+        if (result.errors.length) {
+          const offset = (result.errors[0].labels[0]?.start ?? 0) - (isOrphanObject ? 1 : 0);
+          const position = offsetToPosition(text, offset);
+
+          position.line += segment.line;
+          error = { position, message: result.errors[0].message };
+          parts.length = 0;
+          break;
+        }
+
+        let code = result.code.replace(/\n$/, '');
+
+        if (isOrphanObject) {
+          // The formatter adds a trailing semicolon, or with "semi: false"
+          // style a leading one, and keeps the parens for an object literal
+          // but not an array literal, so strip all of that back off again
+          code = code.replace(/^;/, '').replace(/;$/, '');
+          if (code.startsWith('(') && code.endsWith(')')) {
+            code = code.slice(1, -1);
+          }
+        } else {
+          code = stripLeadingSemicolonGuard(code, text);
+        }
+
+        parts.push(blankLineBefore ? `\n${code}` : code);
+      }
+
+      if (parts.length) {
+        formatted = parts.join('\n');
+      }
     }
 
-    if (result.errors.length) {
-      const [error] = result.errors;
-      const position = offsetToPosition(body, error.labels[0]?.start ?? 0);
+    if (formatted === undefined) {
+      const result = await format(body);
 
-      problems.add(block.filepath, {
-        line: block.line + 1 + leadingBlankLines + position.line,
-        column: block.column + position.column,
-        message: `${error.message} (oxfmt)`,
-      });
-      continue;
-    }
+      if (!result.errors.length) {
+        formatted = stripLeadingSemicolonGuard(result.code.replace(/\n$/, ''), body);
+      } else {
+        error ??= {
+          position: offsetToPosition(body, result.errors[0].labels[0]?.start ?? 0),
+          message: result.errors[0].message,
+        };
 
-    let formatted = result.code.replace(/\n$/, '');
-
-    // With "semi: false" style the formatter guards a leading paren,
-    // bracket, or backtick with a semicolon, which is just noise at
-    // the start of a documentation snippet, so strip that back off
-    if (formatted.startsWith(';') && !body.startsWith(';')) {
-      formatted = formatted.slice(1);
-    }
-
-    // Orphan objects were wrapped in parens which the formatter will have
-    // kept, and with "semi: true" style will have followed with a
-    // semicolon, so strip that all back off again
-    if (isOrphanObject) {
-      formatted = formatted.replace(/;$/, '');
-      if (formatted.startsWith('(') && formatted.endsWith(')')) {
-        formatted = formatted.slice(1, -1);
+        return {
+          problem: {
+            line: block.line + 1 + leadingBlankLines + error.position.line,
+            column:
+              block.column +
+              error.position.column +
+              (error.position.line === 0 ? firstLineIndent : 0),
+            message: `${error.message} (oxfmt)`,
+          },
+        };
       }
     }
 
     if (formatted === value) {
-      continue;
+      return undefined;
     }
 
     if (fix) {
-      changes.set(block, formatted);
-    } else {
-      // Report the first line which differs to give the user a hint
-      const lines = value.split('\n');
-      const formattedLines = formatted.split('\n');
-      let idx = formattedLines.findIndex((line, idx) => line !== lines[idx]);
+      return { formatted };
+    }
 
-      // No difference within the formatted output means the original
-      // has extra trailing lines, so point at the first of those
-      if (idx === -1) {
-        idx = formattedLines.length;
-      }
+    // Report the first line which differs to give the user a hint
+    const lines = value.split('\n');
+    const formattedLines = formatted.split('\n');
+    let idx = formattedLines.findIndex((line, idx) => line !== lines[idx]);
 
-      problems.add(block.filepath, {
+    // No difference within the formatted output means the original
+    // has extra trailing lines, so point at the first of those
+    if (idx === -1) {
+      idx = formattedLines.length;
+    }
+
+    return {
+      problem: {
         line: block.line + 1 + idx,
         column: block.column,
         message: 'Code block is not formatted (oxfmt)',
-      });
+      },
+    };
+  };
+
+  const blocks = await findCodeBlocks(workspace, [...JS_LANGS, ...TS_LANGS], problems);
+
+  // Kick off formatting for everything but collect it in order
+  for (const [idx, result] of (await Promise.all(blocks.map(formatBlock))).entries()) {
+    if (result && 'problem' in result) {
+      problems.add(blocks[idx].filepath, result.problem);
+    } else if (result) {
+      changes.set(blocks[idx], result.formatted);
     }
   }
 

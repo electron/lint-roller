@@ -9,12 +9,12 @@ import { parseArgs } from 'node:util';
 
 import { URI } from 'vscode-uri';
 
+import { findOrphanObjects, wrapOrphanObjects } from '../lib/code-blocks.js';
 import {
   chunkFilenames,
   findCurlyBracedDirectives,
   loadConfig,
   spawnAsync,
-  wrapOrphanObjectInParens,
   LintRollerConfig,
 } from '../lib/helpers.js';
 import { getCodeBlocks, DocsWorkspace } from '../lib/markdown.js';
@@ -170,11 +170,10 @@ async function main(workspaceRoot: string, globs: string[], { config, ignoreGlob
         }
 
         // Indent the lines if necessary so that tsc output is accurate
-        const code = wrapOrphanObjectInParens(
-          codeLines
-            .map((line) => (line.length ? line.padStart(line.length + indent) : line))
-            .join('\n'),
-        );
+        const indentedCode = codeLines
+          .map((line) => (line.length ? line.padStart(line.length + indent) : line))
+          .join('\n');
+        const code = wrapOrphanObjects(indentedCode, findOrphanObjects(indentedCode));
 
         // If there are no require() or import lines, insert a default set of
         // imports so that most snippets will have what they need.

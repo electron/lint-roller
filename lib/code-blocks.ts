@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 
+import { range as balancedRange } from 'balanced-match';
 import { TextDocument, TextEdit, Range } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 
@@ -203,4 +204,135 @@ export function writeCodeBlockChanges(workspace: DocsWorkspace, changes: Map<Cod
     console.log(`File has changed: ${workspace.getWorkspaceRelativePath(uri)}`);
     fs.writeFileSync(uri.fsPath, TextDocument.applyEdits(document, documentEdits));
   }
+}
+
+/** 0-based, inclusive range of lines in a code block */
+export interface LineRange {
+  start: number;
+  end: number;
+}
+
+// A line ending with one of these continues onto the next line, e.g.
+// `const options =` followed by an object literal on the next line
+const CONTINUES_ONTO_NEXT_LINE = /[=([{,:?+\-*/%&|^!~<>]$/;
+
+// A line starting with one of these continues on from the previous line,
+// e.g. a method chain or operator following an array literal
+const CONTINUES_FROM_PREVIOUS_LINE = /^[ \t]*(?:[.?,:)\]}*%&|^=<>]|[+-](?![+-])|\/(?![/*]))/;
+
+// A line which is only a comment (or part of a block comment)
+const COMMENT_LINE = /^[ \t]*(?:\/\/|\/\*|\*)|\*\/[ \t]*$/;
+
+/**
+ * Finds bare object (and array) literals sitting on lines of their own in a
+ * code block, which are common in documentation but need wrapping in parens
+ * to be parsed as an expression rather than a block statement (the idea is
+ * from zeke/standard-markdown, this just finds them a little more carefully)
+ */
+export function findOrphanObjects(value: string): LineRange[] {
+  const lines = value.split('\n');
+  const orphans: LineRange[] = [];
+  let previousLine = '';
+
+  // Brackets in strings and the like can throw the bracket matching off, in
+  // which case guess at the last line ending with the closer as
+  // standard-markdown did
+  const guessEnd = (start: number, closer: string) => {
+    for (let idx = lines.length - 1; idx >= start; idx--) {
+      if (lines[idx].trimEnd().endsWith(closer)) return idx;
+    }
+    return -1;
+  };
+
+  for (let start = 0; start < lines.length; start++) {
+    const line = lines[start];
+    const opener = line[0];
+
+    if ((opener === '{' || opener === '[') && !CONTINUES_ONTO_NEXT_LINE.test(previousLine)) {
+      const closer = opener === '{' ? '}' : ']';
+      const rest = lines.slice(start).join('\n');
+      const balanced = balancedRange(opener, closer, rest);
+      let end = -1;
+
+      if (balanced && balanced[0] === 0) {
+        const after = rest.slice(balanced[1] + 1);
+
+        if (/^[ \t]*(?:\n|$)/.test(after)) {
+          // The closer ends a line so this looks like a bare literal
+          end = start + rest.slice(0, balanced[1]).split('\n').length - 1;
+        } else if (/^['"`\w$\\]/.test(after)) {
+          // The closer was seemingly inside a string
+          end = guessEnd(start, closer);
+        } else {
+          // The closer is followed by more code, e.g. `[a, b].forEach(`
+        }
+      } else {
+        end = guessEnd(start, closer);
+      }
+
+      if (end !== -1) {
+        // What follows a literal might carry on the statement, e.g. `.map(`
+        const nextLine = lines.slice(end + 1).find((next) => next.trim());
+
+        if (!nextLine || !CONTINUES_FROM_PREVIOUS_LINE.test(nextLine)) {
+          orphans.push({ start, end });
+          previousLine = lines[end];
+          start = end;
+          continue;
+        }
+      }
+    }
+
+    // Remember the last line of actual code, without any trailing comment,
+    // to decide whether a literal follows on from it
+    if (line.trim() && !COMMENT_LINE.test(line)) {
+      previousLine = line.replace(/\s\/\/.*$/, '').trimEnd();
+    }
+  }
+
+  return orphans;
+}
+
+/**
+ * What `wrapOrphanObjects` puts at the start of each literal's first line
+ * (so putting columns on that line out by this much) and after its end
+ */
+export const ORPHAN_OBJECT_PREFIX = ';(';
+export const ORPHAN_OBJECT_SUFFIX = ');';
+
+/**
+ * Wraps each of the bare object literals in a code block in parens, guarded
+ * by semicolons so they stay separate from the statements on either side
+ */
+export function wrapOrphanObjects(value: string, orphans: LineRange[]): string {
+  const lines = value.split('\n');
+
+  for (const { start, end } of orphans) {
+    lines[start] = `${ORPHAN_OBJECT_PREFIX}${lines[start]}`;
+    lines[end] = `${lines[end]}${ORPHAN_OBJECT_SUFFIX}`;
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Undoes `wrapOrphanObjects` given the same ranges, or returns undefined if
+ * the text has changed such that the wrapping is no longer where it was put
+ */
+export function unwrapOrphanObjects(text: string, orphans: LineRange[]): string | undefined {
+  const lines = text.split('\n');
+
+  for (const { start, end } of orphans) {
+    if (
+      !lines[start]?.startsWith(ORPHAN_OBJECT_PREFIX) ||
+      !lines[end]?.endsWith(ORPHAN_OBJECT_SUFFIX)
+    ) {
+      return undefined;
+    }
+
+    lines[start] = lines[start].slice(ORPHAN_OBJECT_PREFIX.length);
+    lines[end] = lines[end].slice(0, -ORPHAN_OBJECT_SUFFIX.length);
+  }
+
+  return lines.join('\n');
 }

@@ -4,16 +4,6 @@ import * as os from 'node:os';
 
 import { range as balancedRange } from 'balanced-match';
 
-// From zeke/standard-markdown
-export function removeParensWrappingOrphanedObject(block: string) {
-  return block.replace(/^\(([{|[][\s\S]+[}|\]])\)$/gm, '$1');
-}
-
-// From zeke/standard-markdown
-export function wrapOrphanObjectInParens(block: string) {
-  return block.replace(/^([{|[][\s\S]+[}|\]])$/gm, '($1)');
-}
-
 // Helper for `parseJSONC` which walks the text, copying string literals
 // through verbatim, and lets the callback deal with everything else by
 // returning how many characters it consumed and what to output for them

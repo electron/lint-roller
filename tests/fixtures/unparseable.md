@@ -15,6 +15,13 @@ including orphan object literals:
 { foo: }
 ```
 
+at the right place when indented:
+
+```js
+
+    foo(: bar)
+```
+
 but not ones marked `@nolint`:
 
 ```ts @nolint

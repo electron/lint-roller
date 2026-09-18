@@ -59,3 +59,10 @@ Empty and single-line literals:
 ```js
 { compare: left == right }
 ```
+
+Two object literals in one block:
+
+```js
+{ label: "first" }
+{ label: "second", used: first == second }
+```

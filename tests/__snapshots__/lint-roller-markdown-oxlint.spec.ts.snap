@@ -164,8 +164,9 @@ exports[`lint-roller-markdown-oxlint > preserves blockquotes and indentation wit
          31:1:     Unexpected var, use let or const instead. [eslint(no-var)]
          39:3:     Unexpected var, use let or const instead. [eslint(no-var)]
          60:17:    Expected === and instead saw == [eslint(eqeqeq)]
+         67:32:    Expected === and instead saw == [eslint(eqeqeq)]
 
-There are 5 errors in '<root>'
+There are 6 errors in '<root>'
 "
 `;
 
@@ -230,6 +231,13 @@ Empty and single-line literals:
 
 \`\`\`js
 { compare: left == right }
+\`\`\`
+
+Two object literals in one block:
+
+\`\`\`js
+{ label: "first" }
+{ label: "second", used: first == second }
 \`\`\`
 "
 `;
