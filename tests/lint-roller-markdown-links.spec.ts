@@ -98,34 +98,9 @@ describe('lint-roller-markdown-links', () => {
     expect(status).toEqual(1);
   });
 
-  it('should by default ignore broken external links', () => {
+  it('should not check external links', () => {
     const { status } = runLintMarkdownLinks('--root', FIXTURES_DIR, 'broken-external-link.md');
 
-    expect(status).toEqual(0);
-  });
-
-  it('should catch broken external links with --fetch-external-links', () => {
-    const { status, stdout } = runLintMarkdownLinks(
-      '--root',
-      FIXTURES_DIR,
-      '--fetch-external-links',
-      'broken-external-link.md',
-    );
-
-    expect(stdout).toContain('Broken link');
-    expect(status).toEqual(1);
-  });
-
-  it('can warn about redirected external links with --check-redirects', () => {
-    const { status, stdout } = runLintMarkdownLinks(
-      '--root',
-      FIXTURES_DIR,
-      '--fetch-external-links',
-      '--check-redirects',
-      'redirected-external-link.md',
-    );
-
-    expect(stdout).toContain('Link redirection');
     expect(status).toEqual(0);
   });
 
@@ -133,47 +108,12 @@ describe('lint-roller-markdown-links', () => {
     const { status, stdout } = runLintMarkdownLinks(
       '--root',
       FIXTURES_DIR,
-      'broken-external-link.md',
-      '--fetch-external-links',
+      'absolute-internal-link.md',
+      '--allow-absolute-links',
     );
 
-    expect(stdout).toContain('Broken link');
-    expect(status).toEqual(1);
-  });
-
-  it('should be able to fetch GitHub label URLs', () => {
-    const { status } = runLintMarkdownLinks(
-      '--root',
-      FIXTURES_DIR,
-      'github-label-link.md',
-      '--fetch-external-links',
-    );
-
+    expect(stdout).not.toContain('Absolute link');
     expect(status).toEqual(0);
-  });
-
-  it('should skip twitter links', () => {
-    const { status, stdout } = runLintMarkdownLinks(
-      '--root',
-      FIXTURES_DIR,
-      'twitter-link.md',
-      '--fetch-external-links',
-    );
-
-    expect(status).toEqual(0);
-    expect(stdout).toContain('Skipping');
-  });
-
-  it('should skip npmjs.com links', () => {
-    const { status, stdout } = runLintMarkdownLinks(
-      '--root',
-      FIXTURES_DIR,
-      'skipped-external-link.md',
-      '--fetch-external-links',
-    );
-
-    expect(status).toEqual(0);
-    expect(stdout).toContain('Skipping');
   });
 
   it('should disallow absolute links by default', () => {
