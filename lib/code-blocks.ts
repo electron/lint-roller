@@ -1,6 +1,5 @@
 import * as fs from 'node:fs';
 
-import { range as balancedRange } from 'balanced-match';
 import { TextDocument, TextEdit, Range } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 
@@ -217,11 +216,87 @@ export interface LineRange {
 const CONTINUES_ONTO_NEXT_LINE = /[=([{,:?+\-*/%&|^!~<>]$/;
 
 // A line starting with one of these continues on from the previous line,
-// e.g. a method chain or operator following an array literal
-const CONTINUES_FROM_PREVIOUS_LINE = /^[ \t]*(?:[.?,:)\]}*%&|^=<>]|[+-](?![+-])|\/(?![/*]))/;
+// e.g. a method chain or operator following an array literal (now that
+// comments are out of the picture)
+const CONTINUES_FROM_PREVIOUS_LINE = /^(?:[.?,:)\]}*%&|^=<>/]|[+-](?![+-]))/;
 
-// A line which is only a comment (or part of a block comment)
-const COMMENT_LINE = /^[ \t]*(?:\/\/|\/\*|\*)|\*\/[ \t]*$/;
+/**
+ * Blanks out the insides of comments and string literals in some code, so
+ * that brackets and such in them don't confuse things, leaving every other
+ * character (including newlines) at the same index
+ */
+export function maskStringsAndComments(code: string): string {
+  let state: 'code' | 'line-comment' | 'block-comment' | "'" | '"' | '`' = 'code';
+  let masked = '';
+
+  // Unclosed braces for each template literal substitution being scanned
+  const substitutions: number[] = [];
+
+  for (let idx = 0; idx < code.length; idx++) {
+    const char = code[idx];
+    const next = code[idx + 1];
+
+    switch (state) {
+      case 'code':
+        if (char === '/' && (next === '/' || next === '*')) {
+          state = next === '/' ? 'line-comment' : 'block-comment';
+          masked += '  ';
+          idx++;
+        } else if (char === "'" || char === '"' || char === '`') {
+          state = char;
+          masked += char;
+        } else if (char === '}' && substitutions.at(-1) === 0) {
+          substitutions.pop();
+          state = '`';
+          masked += ' ';
+        } else {
+          if (substitutions.length && (char === '{' || char === '}')) {
+            substitutions[substitutions.length - 1] += char === '{' ? 1 : -1;
+          }
+          masked += char;
+        }
+        break;
+
+      case 'line-comment':
+        if (char === '\n') state = 'code';
+        masked += char === '\n' ? char : ' ';
+        break;
+
+      case 'block-comment':
+        if (char === '*' && next === '/') {
+          state = 'code';
+          masked += '  ';
+          idx++;
+        } else {
+          masked += char === '\n' ? char : ' ';
+        }
+        break;
+
+      default:
+        // In a string of the `state` kind of quote
+        if (char === '\\') {
+          masked += next === '\n' ? ' \n' : next === undefined ? ' ' : '  ';
+          idx++;
+        } else if (char === state) {
+          state = 'code';
+          masked += char;
+        } else if (char === '\n' && state !== '`') {
+          // An unterminated string ends at the end of the line
+          state = 'code';
+          masked += char;
+        } else if (char === '$' && next === '{' && state === '`') {
+          substitutions.push(0);
+          state = 'code';
+          masked += '  ';
+          idx++;
+        } else {
+          masked += char === '\n' ? char : ' ';
+        }
+    }
+  }
+
+  return masked;
+}
 
 /**
  * Finds bare object (and array) literals sitting on lines of their own in a
@@ -230,63 +305,47 @@ const COMMENT_LINE = /^[ \t]*(?:\/\/|\/\*|\*)|\*\/[ \t]*$/;
  * from zeke/standard-markdown, this just finds them a little more carefully)
  */
 export function findOrphanObjects(value: string): LineRange[] {
-  const lines = value.split('\n');
+  const lines = maskStringsAndComments(value).split('\n');
   const orphans: LineRange[] = [];
   let previousLine = '';
 
-  // Brackets in strings and the like can throw the bracket matching off, in
-  // which case guess at the last line ending with the closer as
-  // standard-markdown did
-  const guessEnd = (start: number, closer: string) => {
-    for (let idx = lines.length - 1; idx >= start; idx--) {
-      if (lines[idx].trimEnd().endsWith(closer)) return idx;
-    }
-    return -1;
-  };
-
   for (let start = 0; start < lines.length; start++) {
-    const line = lines[start];
-    const opener = line[0];
+    const opener = lines[start][0];
 
     if ((opener === '{' || opener === '[') && !CONTINUES_ONTO_NEXT_LINE.test(previousLine)) {
       const closer = opener === '{' ? '}' : ']';
       const rest = lines.slice(start).join('\n');
-      const balanced = balancedRange(opener, closer, rest);
+      let depth = 0;
       let end = -1;
 
-      if (balanced && balanced[0] === 0) {
-        const after = rest.slice(balanced[1] + 1);
-
-        if (/^[ \t]*(?:\n|$)/.test(after)) {
-          // The closer ends a line so this looks like a bare literal
-          end = start + rest.slice(0, balanced[1]).split('\n').length - 1;
-        } else if (/^['"`\w$\\]/.test(after)) {
-          // The closer was seemingly inside a string
-          end = guessEnd(start, closer);
-        } else {
-          // The closer is followed by more code, e.g. `[a, b].forEach(`
+      for (let idx = 0; idx < rest.length; idx++) {
+        if (rest[idx] === opener) {
+          depth++;
+        } else if (rest[idx] === closer && --depth === 0) {
+          // The matching closer should end a line for this to be a bare
+          // literal, rather than say `[a, b].forEach(`
+          if (/^[ \t]*(?:\n|$)/.test(rest.slice(idx + 1))) {
+            end = start + rest.slice(0, idx).split('\n').length - 1;
+          }
+          break;
         }
-      } else {
-        end = guessEnd(start, closer);
       }
 
       if (end !== -1) {
         // What follows a literal might carry on the statement, e.g. `.map(`
-        const nextLine = lines.slice(end + 1).find((next) => next.trim());
+        const nextLine = lines.slice(end + 1).find((line) => line.trim());
 
-        if (!nextLine || !CONTINUES_FROM_PREVIOUS_LINE.test(nextLine)) {
+        if (!nextLine || !CONTINUES_FROM_PREVIOUS_LINE.test(nextLine.trim())) {
           orphans.push({ start, end });
-          previousLine = lines[end];
+          previousLine = lines[end].trim();
           start = end;
           continue;
         }
       }
     }
 
-    // Remember the last line of actual code, without any trailing comment,
-    // to decide whether a literal follows on from it
-    if (line.trim() && !COMMENT_LINE.test(line)) {
-      previousLine = line.replace(/\s\/\/.*$/, '').trimEnd();
+    if (lines[start].trim()) {
+      previousLine = lines[start].trim();
     }
   }
 
