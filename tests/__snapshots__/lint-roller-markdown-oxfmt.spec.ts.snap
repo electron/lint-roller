@@ -1,0 +1,159 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lint-roller-markdown-oxfmt > can detect unformatted code blocks 1`] = `
+"
+   dirty.md
+         6:1:      Code block is not formatted (oxfmt)
+         20:1:     Code block is not formatted (oxfmt)
+         27:1:     Code block is not formatted (oxfmt)
+         34:4:     Code block is not formatted (oxfmt)
+         41:1:     Code block is not formatted (oxfmt)
+
+There are 5 errors in '<root>'
+"
+`;
+
+exports[`lint-roller-markdown-oxfmt > can format code blocks with --fix option 1`] = `
+"# The Cleanable Readme
+
+This is a markdown file with some javascript code blocks in it.
+
+\`\`\`js
+var foo = 1
+\`\`\`
+
+Each block is parsed separately, to avoid linting errors about variable
+assignment. Notice that \`var foo\` occurs twice in this markdown file,
+but only once in each individual snippet.
+
+The following code block has a few issues:
+
+- semicolons
+- type-insensitive equality comparison
+- double-quoted string
+
+\`\`\`javascript
+var foo = 2
+console.log('foo is two')
+\`\`\`
+
+Same as before, but with metadata:
+
+\`\`\`javascript title='main.js'
+var foo = 2
+console.log('foo is two')
+\`\`\`
+
+1. Same as before, but indented
+
+   \`\`\`javascript title='main.js'
+   var foo = 2
+   console.log('foo is two')
+   \`\`\`
+
+This non-js code block should be ignored by the cleaner and the linter:
+
+\`\`\`sh
+echo i am a shell command
+\`\`\`
+
+It should allow orphan objects:
+
+\`\`\`js
+{ some: 'object' }
+\`\`\`
+
+and this wrapping kind too:
+
+\`\`\`js
+{
+  some: 'object',
+  with: 'different whitespace and tabbing'
+}
+\`\`\`
+
+and arrays:
+
+\`\`\`js
+[1, 2, 3]
+\`\`\`
+
+and wrapped arrays:
+
+\`\`\`js
+[4, 5, 6]
+\`\`\`
+"
+`;
+
+exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading parens and stray object literals 1`] = `
+"
+   edge-cases.md
+         23:4:     Code block is not formatted (oxfmt)
+         34:1:     Code block is not formatted (oxfmt)
+         39:3:     Code block is not formatted (oxfmt)
+         45:1:     Code block is not formatted (oxfmt)
+
+There are 4 errors in '<root>'
+"
+`;
+
+exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading parens and stray object literals 2`] = `
+"# Edge Cases
+
+An IIFE, which the formatter wants to guard with a leading semicolon:
+
+\`\`\`js
+(async () => {
+  await app.whenReady()
+})()
+\`\`\`
+
+> [!NOTE]
+> A code block inside a callout:
+>
+> \`\`\`js
+> var quoted = 'yes'
+>
+> console.log(quoted)
+> \`\`\`
+
+1. A code block inside a list item, with a blank line:
+
+   \`\`\`js
+   var listed = 'yes'
+
+   console.log(listed)
+   \`\`\`
+
+An object literal after a statement:
+
+\`\`\`js
+var options = {}
+console.log(options)
+{
+  foo: 'bar'
+}
+\`\`\`
+
+- \`\`\`js
+  var sameLine = 'as the list marker'
+  \`\`\`
+
+An object literal with a stray blank line:
+
+\`\`\`js
+{ padded: 'yes' }
+\`\`\`
+"
+`;
+
+exports[`lint-roller-markdown-oxfmt > reports code blocks which cannot be parsed 1`] = `
+"
+   unparseable.md
+         9:8:      Expected \`,\` or \`}\` but found \`.\` (oxfmt)
+         15:8:     Unexpected token (oxfmt)
+
+There are 2 errors in '<root>'
+"
+`;

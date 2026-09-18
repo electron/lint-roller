@@ -25,7 +25,7 @@ An IIFE, which the formatter wants to guard with a leading semicolon:
    console.log(listed)
    ```
 
-An object literal after a statement is linted but left alone by the formatter:
+An object literal after a statement:
 
 ```js
 var options = {}
@@ -33,4 +33,15 @@ console.log(options)
 {
   foo: "bar"
 }
+```
+
+- ```js
+  var sameLine = "as the list marker"
+  ```
+
+An object literal with a stray blank line:
+
+```js
+{ padded: "yes" }
+
 ```

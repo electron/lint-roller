@@ -33,13 +33,19 @@ with `oxlint`, using the project's own `oxlint` installation and config
 (`--config <path>` to use a different one). A handful of rules which don't
 make sense for isolated code snippets (`no-undef`, `no-unused-vars`, etc.) are
 always disabled. TypeScript code blocks are also linted if `--typescript` is
-passed. With `--oxfmt` the code blocks are additionally checked for formatting
-with `oxfmt`, using `.oxfmtrc.json(c)` from the working directory or the config
-provided with `--oxfmt-config <path>`. `--fix` writes lint and formatting fixes
-back to the Markdown files. Linting can be disabled for specific code blocks by
-adding `@nolint` to the info string. Code blocks are linted from a temporary
-directory, so path-based `overrides` in either config do not apply to them.
-`oxlint` (and `oxfmt` if used) must be installed alongside this package.
+passed, and `--fix` writes any autofixes back to the Markdown files. Linting
+can be disabled for specific code blocks by adding `@nolint` to the info
+string. Code blocks are linted from a temporary directory, so path-based
+`overrides` in the config do not apply to them. `oxlint` must be installed
+alongside this package.
+
+`lint-roller-markdown-oxfmt` is a command to check the formatting of JS/TS
+code blocks in Markdown with `oxfmt`, using the project's own `oxfmt`
+installation and `.oxfmtrc.json(c)` from the working directory (`--config
+<path>` to use a different one). `--fix` writes the formatted code back to the
+Markdown files. Code blocks with `@nolint` in their info string are skipped,
+and `overrides` in the config do not apply. `oxfmt` must be installed
+alongside this package.
 
 `lint-roller-markdown-ts-check` is a command to type check JS/TS code blocks
 in Markdown with `tsc`. Type checking can be disabled for specific code blocks
