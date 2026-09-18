@@ -57,6 +57,7 @@ __metadata:
   bin:
     lint-roller-markdown-api-history: ./dist/bin/lint-markdown-api-history.js
     lint-roller-markdown-links: ./dist/bin/lint-markdown-links.js
+    lint-roller-markdown-oxfmt: ./dist/bin/lint-markdown-oxfmt.js
     lint-roller-markdown-oxlint: ./dist/bin/lint-markdown-oxlint.js
     lint-roller-markdown-ts-check: ./dist/bin/lint-markdown-ts-check.js
   languageName: unknown
