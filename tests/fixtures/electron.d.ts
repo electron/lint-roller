@@ -18609,6 +18609,15 @@ interface NodeRequire {
   (moduleName: 'electron/renderer'): typeof Electron.Renderer;
 }
 
+declare namespace NodeJS {
+  interface Require {
+    (moduleName: 'electron'): typeof Electron.CrossProcessExports;
+    (moduleName: 'electron/main'): typeof Electron.Main;
+    (moduleName: 'electron/common'): typeof Electron.Common;
+    (moduleName: 'electron/renderer'): typeof Electron.Renderer;
+  }
+}
+
 interface File {
  /**
   * The real path to the file on the users filesystem
@@ -18784,7 +18793,7 @@ declare namespace NodeJS {
      * `stderr`. Setting this to `true` will silence deprecation warnings. This
      * property is used instead of the `--no-deprecation` command line flag.
      */
-    noDeprecation: boolean;
+    noDeprecation?: boolean;
     /**
      * A `Electron.ParentPort` property if this is a `UtilityProcess` (or `null`
      * otherwise) allowing communication with the parent process.

@@ -50,7 +50,7 @@
   "devDependencies": {
     "@types/balanced-match": "^3.0.2",
     "@types/markdown-it": "^14.1.2",
-    "@types/node": "22.8.7",
+    "@types/node": "22.20.2",
     "markdownlint-cli2": "^0.18.0",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.82.0",

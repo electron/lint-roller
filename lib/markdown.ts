@@ -118,12 +118,7 @@ export class DocsWorkspace implements IWorkspace {
 
   async getAllMarkdownDocuments(): Promise<Iterable<TextDocument>> {
     const files = fs
-      .globSync(this.globs, {
-        cwd: this.root,
-        // `exclude` accepts glob patterns since Node.js 22.14, but the pinned
-        // @types/node predates that and only knows the function signature
-        exclude: this.ignoreGlobs as unknown as (fileName: string) => boolean,
-      })
+      .globSync(this.globs, { cwd: this.root, exclude: this.ignoreGlobs })
       .map((file) => path.resolve(this.root, file));
 
     for (const file of files) {
