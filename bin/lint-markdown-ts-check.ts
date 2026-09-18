@@ -38,11 +38,13 @@ async function typeCheckFiles(
   if (filenames.find((filename) => filename.endsWith('.js'))) {
     options.push('--checkJs');
   }
-  // TypeScript 6+ refuses to compile files passed on the command line when a
-  // tsconfig.json is reachable from the working directory unless told to ignore it
   const { version } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
   if (parseInt(version.split('.')[0], 10) >= 6) {
-    options.push('--ignoreConfig');
+    // TypeScript 6+ refuses to compile files passed on the command line when a
+    // tsconfig.json is reachable from the working directory unless told to
+    // ignore it, and no longer includes every node_modules/@types package by
+    // default; '*' restores that so blocks can keep using e.g. Node.js globals.
+    options.push('--ignoreConfig', '--types', '*');
   }
   const args = [tscExec, ...options, ...typings, ...filenames];
   const { status, stderr, stdout } = await spawnAsync(process.execPath, args);
