@@ -157,6 +157,19 @@ echo i am a shell command
 `;
 
 exports[`lint-roller-markdown-oxlint > preserves blockquotes and indentation with --fix option 1`] = `
+"
+   edge-cases.md
+         15:3:     Unexpected var, use let or const instead. [eslint(no-var)]
+         23:4:     Unexpected var, use let or const instead. [eslint(no-var)]
+         31:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+         39:3:     Unexpected var, use let or const instead. [eslint(no-var)]
+         60:17:    Expected === and instead saw == [eslint(eqeqeq)]
+
+There are 5 errors in '<root>'
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > preserves blockquotes and indentation with --fix option 2`] = `
 "# Edge Cases
 
 An IIFE, which the formatter wants to guard with a leading semicolon:
@@ -203,6 +216,20 @@ An object literal with a stray blank line:
 \`\`\`js
 { padded: "yes" }
 
+\`\`\`
+
+Empty and single-line literals:
+
+\`\`\`js
+{}
+\`\`\`
+
+\`\`\`js
+[]
+\`\`\`
+
+\`\`\`js
+{ compare: left == right }
 \`\`\`
 "
 `;

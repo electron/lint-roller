@@ -45,3 +45,17 @@ An object literal with a stray blank line:
 { padded: "yes" }
 
 ```
+
+Empty and single-line literals:
+
+```js
+{}
+```
+
+```js
+[]
+```
+
+```js
+{ compare: left == right }
+```

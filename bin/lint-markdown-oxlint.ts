@@ -131,11 +131,13 @@ async function main(
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lint-roller-oxlint-'));
 
   try {
-    // Keyed by the basename of the temp file the block was written to
-    const blocks = new Map<string, { block: CodeBlock; tempFile: string; wrapped: boolean }>();
+    // Keyed by the basename of the temp file the block was written to, with
+    // the (1-based) line an opening paren was inserted on if it was wrapped
+    const blocks = new Map<string, { block: CodeBlock; tempFile: string; wrappedLine: number }>();
 
     for (const block of await findCodeBlocks(workspace, langs, problems, { checkCase: true })) {
       const wrappedText = wrapOrphanObjectInParens(block.value);
+      const valueLines = block.value.split('\n');
 
       // Name the file after the original Markdown file and the starting
       // line number of the code block so that any stray output from oxlint
@@ -149,7 +151,7 @@ async function main(
       blocks.set(path.basename(tempFile), {
         block,
         tempFile,
-        wrapped: wrappedText !== block.value,
+        wrappedLine: wrappedText.split('\n').findIndex((line, idx) => line !== valueLines[idx]) + 1,
       });
     }
 
@@ -170,10 +172,11 @@ async function main(
 
         // The code block position is the position of the opening code
         // fence so the first line of code is one after that, which
-        // matches up nicely with the 1-based line from oxlint
+        // matches up nicely with the 1-based line from oxlint. Columns
+        // need adjusting for the paren on the line where one was inserted.
         problems.add(entry.block.filepath, {
           line: entry.block.line + span.line,
-          column: entry.block.column - 1 + span.column,
+          column: entry.block.column - 1 + span.column - (span.line === entry.wrappedLine ? 1 : 0),
           message: `${diagnostic.message}${rule}`,
         });
       }
@@ -182,9 +185,9 @@ async function main(
     if (fix) {
       const changes = new Map<CodeBlock, string>();
 
-      for (const { block, tempFile, wrapped } of blocks.values()) {
+      for (const { block, tempFile, wrappedLine } of blocks.values()) {
         const fixed = fs.readFileSync(tempFile, 'utf8').replace(/\n$/, '');
-        changes.set(block, wrapped ? removeParensWrappingOrphanedObject(fixed) : fixed);
+        changes.set(block, wrappedLine ? removeParensWrappingOrphanedObject(fixed) : fixed);
       }
 
       writeCodeBlockChanges(workspace, changes);

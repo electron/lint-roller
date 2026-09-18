@@ -141,6 +141,11 @@ describe('lint-roller-markdown-oxlint', () => {
   });
 
   it('preserves blockquotes and indentation with --fix option', async () => {
+    const { status, stdout } = runLintMarkdownOxlint('--root', FIXTURES_DIR, 'edge-cases.md');
+
+    expect(stdout.replace(FIXTURES_DIR, '<root>')).toMatchSnapshot();
+    expect(status).toEqual(1);
+
     await withTempCopy('edge-cases.md', async (tmpdir) => {
       const { status, stdout } = runLintMarkdownOxlint('--fix', '--root', tmpdir, 'edge-cases.md');
 
@@ -148,8 +153,8 @@ describe('lint-roller-markdown-oxlint', () => {
         await fs.readFile(path.join(tmpdir, 'edge-cases.md'), { encoding: 'utf-8' }),
       ).toMatchSnapshot();
       expect(stdout).toContain('File has changed: edge-cases.md');
-      expect(stdout).toContain('There are 0 errors');
-      expect(status).toEqual(0);
+      expect(stdout).toContain('There are 1 errors');
+      expect(status).toEqual(1);
     });
   });
 });

@@ -15,7 +15,7 @@ import {
   TS_LANGS,
 } from '../lib/code-blocks.js';
 import type { CodeBlock } from '../lib/code-blocks.js';
-import { parseJSONC, removeParensWrappingOrphanedObject } from '../lib/helpers.js';
+import { parseJSONC } from '../lib/helpers.js';
 import { DocsWorkspace } from '../lib/markdown.js';
 
 interface Options {
@@ -154,7 +154,10 @@ async function main(
     // kept, and with "semi: true" style will have followed with a
     // semicolon, so strip that all back off again
     if (isOrphanObject) {
-      formatted = removeParensWrappingOrphanedObject(formatted.replace(/;$/, ''));
+      formatted = formatted.replace(/;$/, '');
+      if (formatted.startsWith('(') && formatted.endsWith(')')) {
+        formatted = formatted.slice(1, -1);
+      }
     }
 
     if (formatted === value) {
@@ -166,10 +169,17 @@ async function main(
     } else {
       // Report the first line which differs to give the user a hint
       const lines = value.split('\n');
-      const idx = formatted.split('\n').findIndex((line, idx) => line !== lines[idx]);
+      const formattedLines = formatted.split('\n');
+      let idx = formattedLines.findIndex((line, idx) => line !== lines[idx]);
+
+      // No difference within the formatted output means the original
+      // has extra trailing lines, so point at the first of those
+      if (idx === -1) {
+        idx = formattedLines.length;
+      }
 
       problems.add(block.filepath, {
-        line: block.line + 1 + Math.max(0, idx),
+        line: block.line + 1 + idx,
         column: block.column,
         message: 'Code block is not formatted (oxfmt)',
       });
