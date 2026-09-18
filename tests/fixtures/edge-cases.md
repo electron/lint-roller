@@ -81,6 +81,8 @@ const re = /abc/
 /xyz/.test(detail)
 const explicit = true
 { terminated: explicit == true };
+let step = 1
+{ rate: step++ / explicit, next: step == 2 }
 const inTemplate = `${
 { toString: () => "not a statement" }
 }`

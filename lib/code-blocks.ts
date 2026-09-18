@@ -226,9 +226,9 @@ const CONTINUES_ONTO_NEXT_LINE = /[=([{,:?+\-*%&|^!~<>]$/;
 const CONTINUES_FROM_PREVIOUS_LINE = /^(?:[.?,:)\]}*%&|^=<>]|[+-](?![+-]))/;
 
 // A `/` following one of these (or one of the keywords, or nothing at all)
-// starts a regex literal rather than being division
+// starts a regex literal rather than being division (which `++` precedes)
 const PRECEDES_REGEX_LITERAL =
-  /(?:^|[(,=:[!&|?{};+\-*%<>~^]|\b(?:return|typeof|case|do|else|in|of|instanceof|new|delete|void|throw|yield|await))[ \t\n]*$/;
+  /(?:^|[(,=:[!&|?{};*%<>~^]|(?<![+-])[+-]|\b(?:return|typeof|case|do|else|in|of|instanceof|new|delete|void|throw|yield|await))[ \t\n]*$/;
 
 const CLOSING_BRACKETS: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
 

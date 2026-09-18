@@ -166,8 +166,9 @@ exports[`lint-roller-markdown-oxlint > preserves blockquotes and indentation wit
          60:17:    Expected === and instead saw == [eslint(eqeqeq)]
          67:32:    Expected === and instead saw == [eslint(eqeqeq)]
          83:24:    Expected === and instead saw == [eslint(eqeqeq)]
+         85:39:    Expected === and instead saw == [eslint(eqeqeq)]
 
-There are 7 errors in '<root>'
+There are 8 errors in '<root>'
 "
 `;
 
@@ -255,6 +256,8 @@ const re = /abc/
 /xyz/.test(detail)
 const explicit = true
 { terminated: explicit == true };
+let step = 1
+{ rate: step++ / explicit, next: step == 2 }
 const inTemplate = \`\${
 { toString: () => "not a statement" }
 }\`
