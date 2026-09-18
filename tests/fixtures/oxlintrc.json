@@ -1,0 +1,10 @@
+{
+  "plugins": ["node"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-var": "error",
+    "eqeqeq": "error"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  // Roughly what standard style looks like
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "none", /* trailing commas are allowed in JSONC */
+}

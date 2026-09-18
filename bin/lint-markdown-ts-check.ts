@@ -75,11 +75,7 @@ function parseDirectives(directive: string, value: string) {
     .filter((parsed): parsed is RegExpMatchArray => parsed !== null);
 }
 
-async function main(
-  workspaceRoot: string,
-  globs: string[],
-  { config = undefined, ignoreGlobs = [] }: Options,
-) {
+async function main(workspaceRoot: string, globs: string[], { config, ignoreGlobs = [] }: Options) {
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lint-roller-ts-check-'));
 

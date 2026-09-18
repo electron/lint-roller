@@ -1,0 +1,356 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lint-roller-markdown-oxlint > can detect errors in code blocks 1`] = `
+"
+   dirty.md
+         6:1:      Unexpected var, use let or const instead. [eslint(no-var)]
+         20:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+         21:9:     Expected === and instead saw == [eslint(eqeqeq)]
+         27:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+         28:9:     Expected === and instead saw == [eslint(eqeqeq)]
+         34:4:     Unexpected var, use let or const instead. [eslint(no-var)]
+         35:12:    Expected === and instead saw == [eslint(eqeqeq)]
+         40:1:     Code block language identifier should be all lowercase
+         41:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+
+There are 9 errors in '<root>'
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > can fix cleanable errors with --fix option 1`] = `
+"# The Cleanable Readme
+
+This is a markdown file with some javascript code blocks in it.
+
+\`\`\`js
+const foo = 1;
+\`\`\`
+
+Each block is parsed separately, to avoid linting errors about variable
+assignment. Notice that \`var foo\` occurs twice in this markdown file,
+but only once in each individual snippet.
+
+The following code block has a few issues:
+
+- semicolons
+- type-insensitive equality comparison
+- double-quoted string
+
+\`\`\`javascript
+const foo = 2;
+console.log("foo is two");
+\`\`\`
+
+Same as before, but with metadata:
+
+\`\`\`javascript title='main.js'
+const foo = 2;
+console.log("foo is two");
+\`\`\`
+
+1. Same as before, but indented
+
+   \`\`\`javascript title='main.js'
+   const foo = 2;
+   console.log("foo is two");
+   \`\`\`
+
+This non-js code block should be ignored by the cleaner and the linter:
+
+\`\`\`sh
+echo i am a shell command
+\`\`\`
+
+It should allow orphan objects:
+
+\`\`\`js
+{some: 'object'}
+\`\`\`
+
+and this wrapping kind too:
+
+\`\`\`js
+{
+  some: 'object',
+  with: 'different whitespace and tabbing'
+}
+\`\`\`
+
+and arrays:
+
+\`\`\`js
+[1,2,3]
+\`\`\`
+
+and wrapped arrays:
+
+\`\`\`js
+[
+  4,
+  5,
+  6,
+]
+\`\`\`
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > only lints TypeScript blocks with --typescript 1`] = `
+"
+   typescript.md
+         14:9:     Expected === and instead saw == [eslint(eqeqeq)]
+         21:9:     Expected === and instead saw == [eslint(eqeqeq)]
+
+There are 2 errors in '<root>'
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > outputs uncleanable errors with --fix option 1`] = `
+"# The Dirty Readme
+
+This is a markdown file with some javascript code blocks in it.
+
+\`\`\`js
+const foo = 1;
+\`\`\`
+
+Each block is parsed separately, to avoid linting errors about variable
+assignment. Notice that \`var foo\` occurs twice in this markdown file,
+but only once in each individual snippet.
+
+The following code block has a few issues:
+
+- semicolons
+- type-insensitive equality comparison
+- double-quoted string
+
+\`\`\`javascript
+const foo = 2;
+if (foo == 1) console.log("foo is one");
+\`\`\`
+
+Same as before, but with metadata:
+
+\`\`\`javascript title='main.js'
+const foo = 2;
+if (foo == 1) console.log("foo is one");
+\`\`\`
+
+1. Same as before, but indented
+
+   \`\`\`javascript title='main.js'
+   const foo = 2;
+   if (foo == 1) console.log("foo is one");
+   \`\`\`
+
+Blocks should have lowercase language identifiers:
+
+\`\`\`JavaScript
+const foo = 3;
+\`\`\`
+
+This non-js code block should be ignored by the linter:
+
+\`\`\`sh
+echo i am a shell command
+\`\`\`
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > with --oxfmt > can detect lint and formatting errors in code blocks 1`] = `
+"
+   dirty.md
+         6:1:      Unexpected var, use let or const instead. [eslint(no-var)]
+         6:1:      Code block is not formatted (oxfmt)
+         20:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+         20:1:     Code block is not formatted (oxfmt)
+         21:9:     Expected === and instead saw == [eslint(eqeqeq)]
+         27:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+         27:1:     Code block is not formatted (oxfmt)
+         28:9:     Expected === and instead saw == [eslint(eqeqeq)]
+         34:4:     Unexpected var, use let or const instead. [eslint(no-var)]
+         34:4:     Code block is not formatted (oxfmt)
+         35:12:    Expected === and instead saw == [eslint(eqeqeq)]
+         40:1:     Code block language identifier should be all lowercase
+         41:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+         41:1:     Code block is not formatted (oxfmt)
+
+There are 14 errors in '<root>'
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > with --oxfmt > can fix lint and formatting errors with --fix option 1`] = `
+"# The Cleanable Readme
+
+This is a markdown file with some javascript code blocks in it.
+
+\`\`\`js
+const foo = 1
+\`\`\`
+
+Each block is parsed separately, to avoid linting errors about variable
+assignment. Notice that \`var foo\` occurs twice in this markdown file,
+but only once in each individual snippet.
+
+The following code block has a few issues:
+
+- semicolons
+- type-insensitive equality comparison
+- double-quoted string
+
+\`\`\`javascript
+const foo = 2
+console.log('foo is two')
+\`\`\`
+
+Same as before, but with metadata:
+
+\`\`\`javascript title='main.js'
+const foo = 2
+console.log('foo is two')
+\`\`\`
+
+1. Same as before, but indented
+
+   \`\`\`javascript title='main.js'
+   const foo = 2
+   console.log('foo is two')
+   \`\`\`
+
+This non-js code block should be ignored by the cleaner and the linter:
+
+\`\`\`sh
+echo i am a shell command
+\`\`\`
+
+It should allow orphan objects:
+
+\`\`\`js
+{ some: 'object' }
+\`\`\`
+
+and this wrapping kind too:
+
+\`\`\`js
+{
+  some: 'object',
+  with: 'different whitespace and tabbing'
+}
+\`\`\`
+
+and arrays:
+
+\`\`\`js
+[1, 2, 3]
+\`\`\`
+
+and wrapped arrays:
+
+\`\`\`js
+[4, 5, 6]
+\`\`\`
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > with --oxfmt > handles blockquotes, list items, leading parens and stray object literals 1`] = `
+"
+   edge-cases.md
+         15:3:     Unexpected var, use let or const instead. [eslint(no-var)]
+         23:4:     Unexpected var, use let or const instead. [eslint(no-var)]
+         23:4:     Code block is not formatted (oxfmt)
+         31:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+
+There are 4 errors in '<root>'
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > with --oxfmt > handles blockquotes, list items, leading parens and stray object literals 2`] = `
+"# Edge Cases
+
+An IIFE, which the formatter wants to guard with a leading semicolon:
+
+\`\`\`js
+(async () => {
+  await app.whenReady()
+})()
+\`\`\`
+
+> [!NOTE]
+> A code block inside a callout:
+>
+> \`\`\`js
+> const quoted = 'yes'
+>
+> console.log(quoted)
+> \`\`\`
+
+1. A code block inside a list item, with a blank line:
+
+   \`\`\`js
+   const listed = 'yes'
+
+   console.log(listed)
+   \`\`\`
+
+An object literal after a statement is linted but left alone by the formatter:
+
+\`\`\`js
+const options = {}
+console.log(options)
+{
+  foo: "bar"
+}
+\`\`\`
+"
+`;
+
+exports[`lint-roller-markdown-oxlint > with --oxfmt > outputs uncleanable errors with --fix option 1`] = `
+"# The Dirty Readme
+
+This is a markdown file with some javascript code blocks in it.
+
+\`\`\`js
+const foo = 1
+\`\`\`
+
+Each block is parsed separately, to avoid linting errors about variable
+assignment. Notice that \`var foo\` occurs twice in this markdown file,
+but only once in each individual snippet.
+
+The following code block has a few issues:
+
+- semicolons
+- type-insensitive equality comparison
+- double-quoted string
+
+\`\`\`javascript
+const foo = 2
+if (foo == 1) console.log('foo is one')
+\`\`\`
+
+Same as before, but with metadata:
+
+\`\`\`javascript title='main.js'
+const foo = 2
+if (foo == 1) console.log('foo is one')
+\`\`\`
+
+1. Same as before, but indented
+
+   \`\`\`javascript title='main.js'
+   const foo = 2
+   if (foo == 1) console.log('foo is one')
+   \`\`\`
+
+Blocks should have lowercase language identifiers:
+
+\`\`\`JavaScript
+const foo = 3
+\`\`\`
+
+This non-js code block should be ignored by the linter:
+
+\`\`\`sh
+echo i am a shell command
+\`\`\`
+"
+`;

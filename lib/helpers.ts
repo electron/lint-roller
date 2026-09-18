@@ -4,10 +4,6 @@ import * as os from 'node:os';
 
 import { range as balancedRange } from 'balanced-match';
 
-// Helper function to work around import issues with ESM module
-// oxlint-disable-next-line no-new-func, typescript-eslint(no-implied-eval)
-export const dynamicImport = new Function('specifier', 'return import(specifier)');
-
 // From zeke/standard-markdown
 export function removeParensWrappingOrphanedObject(block: string) {
   return block.replace(/^\(([{|[][\s\S]+[}|\]])\)$/gm, '$1');
@@ -16,6 +12,62 @@ export function removeParensWrappingOrphanedObject(block: string) {
 // From zeke/standard-markdown
 export function wrapOrphanObjectInParens(block: string) {
   return block.replace(/^([{|[][\s\S]+[}|\]])$/gm, '($1)');
+}
+
+// Helper for `parseJSONC` which walks the text, copying string literals
+// through verbatim, and lets the callback deal with everything else by
+// returning how many characters it consumed and what to output for them
+function mapOutsideStrings(
+  text: string,
+  fn: (index: number) => [consumed: number, output: string] | undefined,
+): string {
+  let out = '';
+  let i = 0;
+
+  while (i < text.length) {
+    if (text[i] === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') {
+        j += text[j] === '\\' ? 2 : 1;
+      }
+      out += text.slice(i, j + 1);
+      i = j + 1;
+    } else {
+      const [consumed, output] = fn(i) ?? [1, text[i]];
+      out += output;
+      i += consumed;
+    }
+  }
+
+  return out;
+}
+
+// Minimal JSONC support (comments and trailing commas), which is what the
+// oxc tools accept in their JSON config files
+export function parseJSONC(text: string): unknown {
+  const withoutComments = mapOutsideStrings(text, (i) => {
+    if (text.startsWith('//', i)) {
+      const end = text.indexOf('\n', i);
+      return [(end === -1 ? text.length : end) - i, ''];
+    }
+    if (text.startsWith('/*', i)) {
+      const end = text.indexOf('*/', i + 2);
+      if (end === -1) {
+        throw new SyntaxError('Unterminated block comment');
+      }
+      return [end + 2 - i, ''];
+    }
+    return undefined;
+  });
+
+  const withoutTrailingCommas = mapOutsideStrings(withoutComments, (i) => {
+    if (withoutComments[i] === ',' && /^\s*[}\]]/.test(withoutComments.slice(i + 1))) {
+      return [1, ''];
+    }
+    return undefined;
+  });
+
+  return JSON.parse(withoutTrailingCommas);
 }
 
 export type SpawnAsyncResult = {
@@ -42,7 +94,8 @@ export async function spawnAsync(
         stdio.stderr += data;
       });
 
-      spawned.on('exit', (code) => resolve({ ...stdio, status: code }));
+      // Wait for 'close' rather than 'exit' so that stdio is fully drained
+      spawned.on('close', (code) => resolve({ ...stdio, status: code }));
       spawned.on('error', (err) => reject(err));
     } catch (err) {
       reject(err);

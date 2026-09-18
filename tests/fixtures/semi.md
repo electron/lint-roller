@@ -51,7 +51,7 @@ and wrapped arrays:
 
 ```js
 [
-  4,
+  4, // four
   5,
   6
 ]
