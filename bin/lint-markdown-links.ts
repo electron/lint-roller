@@ -33,8 +33,61 @@ const diagnosticOptions: DiagnosticOptions = {
   validateUnusedLinkDefinitions: DiagnosticLevel.error,
 };
 
+// Hosts whose links are not fetched. X (twitter.com/x.com) blocks automated
+// fetches, so its links can't be verified.
+const SKIPPED_HOSTS = ['npmjs.com', 'twitter.com', 'x.com'];
+
+function getSkippedHost(hostname: string) {
+  return SKIPPED_HOSTS.find((host) => hostname === host || hostname.endsWith(`.${host}`));
+}
+
+async function fetchExternalLink(link: string, checkRedirects = false) {
+  const url = new URL(link);
+  const skippedHost = getSkippedHost(url.hostname);
+  if (skippedHost) {
+    console.log(`Skipping ${skippedHost} link check`, link);
+    return true;
+  }
+
+  try {
+    const response = await fetch(link, {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.39 Electron/29.0.0 Safari/537.36',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'accept-language': 'en-US,en;q=0.5',
+        'accept-encoding': 'gzip, deflate, br',
+      },
+    });
+    if (response.status !== 200) {
+      console.log('Broken link', link, response.status, response.statusText);
+    } else {
+      if (checkRedirects && response.redirected) {
+        const wwwUrl = new URL(link);
+        wwwUrl.hostname = `www.${wwwUrl.hostname}`;
+
+        // For now cut down on noise to find meaningful redirects
+        const wwwRedirect = wwwUrl.toString() === response.url;
+        const trailingSlashRedirect = `${link}/` === response.url;
+
+        if (!wwwRedirect && !trailingSlashRedirect) {
+          console.log('Link redirection', link, '->', response.url);
+        }
+      }
+
+      return true;
+    }
+  } catch {
+    console.log('Broken link', link);
+  }
+
+  return false;
+}
+
 interface Options {
   allowAbsoluteLinks?: boolean;
+  fetchExternalLinks?: boolean;
+  checkRedirects?: boolean;
   ignoreGlobs?: string[];
   resourceRoot?: string;
 }
@@ -42,7 +95,13 @@ interface Options {
 async function main(
   workspaceRoot: string,
   globs: string[],
-  { allowAbsoluteLinks = false, ignoreGlobs = [], resourceRoot }: Options,
+  {
+    allowAbsoluteLinks = false,
+    fetchExternalLinks = false,
+    checkRedirects = false,
+    ignoreGlobs = [],
+    resourceRoot,
+  }: Options,
 ) {
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs, resourceRoot);
   const parser = new MarkdownParser();
@@ -57,6 +116,8 @@ async function main(
   const cts = new CancellationTokenSource();
   let errors = false;
 
+  const externalLinks = new Set<string>();
+
   try {
     // Collect diagnostics for all documents in the workspace
     for (const document of await workspace.getAllMarkdownDocuments()) {
@@ -69,6 +130,14 @@ async function main(
 
         if (!allowAbsoluteLinks && link.data && link.data.source.hrefText.startsWith('/')) {
           absoluteLinks.add(link);
+        }
+
+        if (
+          link.target &&
+          link.target.startsWith('http') &&
+          new URL(link.target).hostname !== 'localhost'
+        ) {
+          externalLinks.add(link.target);
         }
       }
       const diagnostics = await languageService.computeDiagnostics(
@@ -104,14 +173,22 @@ async function main(
     cts.dispose();
   }
 
+  if (fetchExternalLinks) {
+    const externalLinkStates = await Promise.all(
+      Array.from(externalLinks).map((link) => fetchExternalLink(link, checkRedirects)),
+    );
+
+    errors = errors || !externalLinkStates.every((x) => x);
+  }
+
   return errors;
 }
 
 function parseCommandLine() {
   const showUsage = (): never => {
     console.log(
-      'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--allow-absolute-links] ' +
-        '[--ignore <globs>] [--ignore-path <path>] [--resource-root <dir>]',
+      'Usage: lint-roller-markdown-links [--root <dir>] <globs> [-h|--help] [--allow-absolute-links]' +
+        '[--fetch-external-links] [--check-redirects] [--ignore <globs>] [--resource-root <dir>]',
     );
     process.exit(1);
   };
@@ -121,6 +198,12 @@ function parseCommandLine() {
       allowPositionals: true,
       options: {
         'allow-absolute-links': {
+          type: 'boolean',
+        },
+        'fetch-external-links': {
+          type: 'boolean',
+        },
+        'check-redirects': {
           type: 'boolean',
         },
         root: {
@@ -173,6 +256,8 @@ if ((await fs.promises.realpath(process.argv[1])) === fileURLToPath(import.meta.
 
   main(path.resolve(process.cwd(), opts.root), positionals, {
     allowAbsoluteLinks: opts['allow-absolute-links'],
+    fetchExternalLinks: opts['fetch-external-links'],
+    checkRedirects: opts['check-redirects'],
     ignoreGlobs: opts.ignore,
     resourceRoot: opts['resource-root']
       ? path.resolve(process.cwd(), opts['resource-root'])

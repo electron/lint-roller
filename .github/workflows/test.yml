@@ -18,6 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         node-version:
+          # First 24.x with the fix for nodejs/node#56645, where process.exit()
+          # with a fetch() socket still open aborts on Windows
           - '24.20'
           - '22.17'
         os:
