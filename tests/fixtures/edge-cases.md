@@ -83,6 +83,8 @@ const explicit = true
 { terminated: explicit == true };
 let step = 1
 { rate: step++ / explicit, next: step == 2 }
+step++
+{ after: "an increment" }
 const inTemplate = `${
 { toString: () => "not a statement" }
 }`

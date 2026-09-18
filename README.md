@@ -40,11 +40,12 @@ alongside this package.
 
 `lint-roller-markdown-oxfmt` is a command to check the formatting of JS/TS
 code blocks in Markdown with `oxfmt`, using the project's own `oxfmt`
-installation and `.oxfmtrc.json(c)` from the working directory (`--config
+installation and config as found from the working directory (`--config
 <path>` to use a different one). `--fix` writes the formatted code back to the
 Markdown files. Code blocks with `@nolint` in their info string are skipped,
-and `overrides` in the config do not apply. `oxfmt` must be installed
-alongside this package.
+and since they are formatted from a temporary directory path-based `overrides`
+in the config do not apply to them. `oxfmt` must be installed alongside this
+package.
 
 `lint-roller-markdown-ts-check` is a command to type check JS/TS code blocks
 in Markdown with `tsc`. Type checking can be disabled for specific code blocks

@@ -216,9 +216,10 @@ export interface OrphanObject {
 }
 
 // A line ending with one of these continues onto the next line, e.g.
-// `const options =` followed by an object literal on the next line (`/`
-// is left out as it is far more likely to be closing a regex than division)
-const CONTINUES_ONTO_NEXT_LINE = /[=([{,:?+\-*%&|^!~<>]$/;
+// `const options =` followed by an object literal on the next line (but
+// not `++` or `--`, and `/` is left out as it is far more likely to be
+// closing a regex than division)
+const CONTINUES_ONTO_NEXT_LINE = /(?:[=([{,:?*%&|^!~<>]|(?<![+-])[+-])$/;
 
 // A line starting with one of these continues on from the previous line,
 // e.g. a method chain or operator following an array literal (this is only

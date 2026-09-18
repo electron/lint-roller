@@ -18,7 +18,7 @@ import {
   wrapOrphanObjects,
 } from '../lib/code-blocks.js';
 import type { CodeBlock, OrphanObject } from '../lib/code-blocks.js';
-import { spawnAsync } from '../lib/helpers.js';
+import { resolveBin, spawnAsync } from '../lib/helpers.js';
 import { DocsWorkspace } from '../lib/markdown.js';
 
 interface Options {
@@ -60,27 +60,6 @@ const DISABLED_RULE_CODE = new RegExp(
 );
 
 const UNKNOWN_FILE = '<unknown>';
-
-function resolveOxlintBin(): string {
-  let pkgPath: string;
-
-  try {
-    pkgPath = fileURLToPath(import.meta.resolve('oxlint/package.json'));
-  } catch {
-    throw new Error(
-      'Could not resolve "oxlint" - it must be installed alongside @electron/lint-roller to use lint-roller-markdown-oxlint',
-    );
-  }
-
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-  const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.oxlint;
-
-  if (!bin) {
-    throw new Error('Could not determine the "oxlint" bin path from its package.json');
-  }
-
-  return path.join(path.dirname(pkgPath), bin);
-}
 
 async function runOxlint(
   oxlintBin: string,
@@ -125,7 +104,7 @@ async function main(
   globs: string[],
   { config, fix = false, ignoreGlobs = [], typescript = false }: Options,
 ) {
-  const oxlintBin = resolveOxlintBin();
+  const oxlintBin = resolveBin('oxlint');
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
   const problems = new Problems();
   const langs = typescript ? [...JS_LANGS, ...TS_LANGS] : JS_LANGS;

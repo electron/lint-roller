@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from 'node:util';
-
-import type { FormatConfig } from 'oxfmt';
+import { parseArgs, stripVTControlCharacters } from 'node:util';
 
 import {
   findCodeBlocks,
@@ -20,7 +19,7 @@ import {
   TS_LANGS,
 } from '../lib/code-blocks.js';
 import type { CodeBlock, OrphanObject, Problem } from '../lib/code-blocks.js';
-import { parseJSONC } from '../lib/helpers.js';
+import { resolveBin, spawnAsync } from '../lib/helpers.js';
 import { DocsWorkspace } from '../lib/markdown.js';
 
 interface Options {
@@ -29,7 +28,23 @@ interface Options {
   ignoreGlobs?: string[];
 }
 
-type Oxfmt = typeof import('oxfmt');
+/**
+ * A 0-based position within a temp file that oxfmt was
+ * given, where the column is counted in UTF-8 bytes
+ */
+interface ParseError {
+  line: number;
+  column: number;
+  message: string;
+}
+
+// A parse error in the report oxfmt prints to stderr, which looks like this,
+// or with colour forced on (like when the CI environment variable is around)
+// the same with ANSI escapes and Unicode box-drawing characters:
+//
+//   x Unexpected token
+//    ,-[/tmp/lint-roller-oxfmt-1a2B3c/blocks/4-docs-api-app-md-56.js:2:3]
+const PARSE_ERROR = /^[ \t]*[x×][ \t]+(.+)\r?\n[ \t]*(?:,-|╭─)\[(.+):(\d+):(\d+)\]/gm;
 
 // With "semi: false" style the formatter guards a statement starting with a
 // paren, bracket, backtick, or such with a leading semicolon, which is just
@@ -130,76 +145,173 @@ function splitIntoSegments(text: string, orphans: OrphanObject[]): Segment[] {
   return segments;
 }
 
-async function loadOxfmt(): Promise<Oxfmt> {
-  try {
-    return await import('oxfmt');
-  } catch (cause) {
+async function runOxfmt(
+  oxfmtBin: string,
+  dir: string,
+  { config, ignorePath }: { config?: string; ignorePath: string },
+): Promise<Map<string, ParseError>> {
+  // Formats the files in place, finding the config from the working directory
+  // when not given one - as it otherwise would the ignore files, which are of
+  // no use here and might even match the temp files, hence the empty stand-in
+  const args = [oxfmtBin, '--ignore-path', ignorePath];
+
+  if (config) {
+    args.push('--config', path.resolve(config));
+  }
+
+  args.push(dir);
+
+  const result = await spawnAsync(process.execPath, args);
+  const stderr = stripVTControlCharacters(result.stderr);
+  const errors = new Map<string, ParseError>();
+
+  for (const [, message, file, line, column] of stderr.matchAll(PARSE_ERROR)) {
+    const name = path.basename(file);
+
+    // Only the first error in each file is of interest
+    if (!errors.has(name)) {
+      errors.set(name, { line: Number(line) - 1, column: Number(column) - 1, message });
+    }
+  }
+
+  // Files which could not be parsed make for an exit status of 2 (the rest
+  // still get formatted), anything else, like a bad config, is unexpected
+  if (result.status !== 0 && !(result.status === 2 && errors.size)) {
     throw new Error(
-      'Could not import "oxfmt" - it must be installed alongside @electron/lint-roller to use lint-roller-markdown-oxfmt',
-      { cause },
+      `oxfmt exited with status ${result.status}:\n${(stderr || result.stdout).trim()}`,
     );
   }
-}
 
-async function loadConfig(
-  { format }: Oxfmt,
-  configPath: string | undefined,
-): Promise<FormatConfig> {
-  let resolved: string | undefined;
-
-  if (configPath) {
-    resolved = path.resolve(configPath);
-    if (!fs.existsSync(resolved)) {
-      throw new Error(`oxfmt config not found at ${resolved}`);
-    }
-  } else {
-    resolved = ['.oxfmtrc.json', '.oxfmtrc.jsonc']
-      .map((name) => path.resolve(name))
-      .find((candidate) => fs.existsSync(candidate));
-  }
-
-  if (!resolved) {
-    return {};
-  }
-
-  let config: Record<string, unknown>;
-
-  try {
-    config = parseJSONC(fs.readFileSync(resolved, 'utf8')) as Record<string, unknown>;
-  } catch (cause) {
-    throw new Error(`Could not parse oxfmt config at ${resolved}`, { cause });
-  }
-
-  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
-    throw new Error(`Invalid oxfmt config at ${resolved}: expected an object`);
-  }
-
-  // These only make sense when oxfmt is discovering files itself
-  delete config.$schema;
-  delete config.ignorePatterns;
-  delete config.overrides;
-
-  // Line endings are matched to the Markdown file when writing changes
-  config.endOfLine = 'lf';
-
-  // Surface any complaints about the config once up front rather than
-  // for every code block
-  const { errors } = await format('config-check.js', '', config as FormatConfig);
-
-  if (errors.length) {
-    throw new Error(`Invalid oxfmt config at ${resolved}: ${errors[0].message}`);
-  }
-
-  return config as FormatConfig;
+  return errors;
 }
 
 /**
- * Converts a UTF-8 byte offset (as reported in oxfmt errors)
- * into a 0-based line and column within `text`
+ * Where a parse error is in `text` going by characters rather than UTF-8
+ * bytes, with running out of input put down to the end of the last line
+ * rather than the start of the one after
  */
-function offsetToPosition(text: string, offset: number) {
-  const lines = Buffer.from(text).subarray(0, Math.max(0, offset)).toString().split('\n');
-  return { line: lines.length - 1, column: lines[lines.length - 1].length };
+function locate(text: string, { line, column }: ParseError): { line: number; column: number } {
+  const lines = text.split('\n');
+
+  if (line >= lines.length) {
+    return { line: lines.length - 1, column: lines[lines.length - 1].length };
+  }
+
+  return { line, column: Buffer.from(lines[line]).subarray(0, column).toString().length };
+}
+
+interface Entry {
+  block: CodeBlock;
+  /** The code with the whitespace just inside the code fences dropped */
+  body: string;
+  /** The body split up around its bare object literals, if it has any */
+  segments: { segment: Segment; text: string; tempFile: string }[];
+  /** Temp file of the body as a whole, if it came to formatting that */
+  tempFile?: string;
+}
+
+/**
+ * Puts the formatted code block back together from what oxfmt made of its
+ * temp files and decides what, if anything, to do about it
+ */
+function checkBlock(
+  { block, body, segments, tempFile }: Entry,
+  readTempFile: (tempFile: string) => string,
+  errors: Map<string, ParseError>,
+  fix: boolean,
+): { problem: Problem } | { formatted: string } | undefined {
+  const { value } = block;
+
+  // Whitespace just inside the code fences is dropped when formatting,
+  // but is needed to map parse errors back to their original position
+  const leadingWhitespace = /^\s*/.exec(value)![0];
+  const leadingBlankLines = leadingWhitespace.split('\n').length - 1;
+  const firstLineIndent = leadingWhitespace.length - leadingWhitespace.lastIndexOf('\n') - 1;
+
+  let formatted: string | undefined;
+  let error: ParseError | undefined;
+
+  if (segments.length) {
+    const parts: string[] = [];
+
+    for (const { segment, text, tempFile } of segments) {
+      const { orphan, blankLineBefore } = segment;
+      const segmentError = errors.get(tempFile);
+
+      // The code block got formatted as a whole instead then, but hang on to
+      // this (likely more accurate) error in case that failed too
+      if (segmentError) {
+        let { line, column } = locate(text, segmentError);
+
+        if (orphan && line === 0) {
+          column = Math.max(0, column - ORPHAN_OBJECT_PREFIX.length);
+        }
+
+        error = { line: segment.line + line, column, message: segmentError.message };
+        parts.length = 0;
+        break;
+      }
+
+      let code = readTempFile(tempFile);
+
+      code = orphan
+        ? unwrapFormattedOrphanObject(code, segment.text)
+        : stripLeadingSemicolonGuard(code, text);
+
+      parts.push(blankLineBefore ? `\n${code}` : code);
+    }
+
+    if (parts.length) {
+      formatted = parts.join('\n');
+    }
+  }
+
+  if (formatted === undefined) {
+    // Always written when there were no segments or one could not be parsed
+    const bodyTempFile = tempFile!;
+    const bodyError = errors.get(bodyTempFile);
+
+    if (!bodyError) {
+      formatted = stripLeadingSemicolonGuard(readTempFile(bodyTempFile), body);
+    } else {
+      error ??= { ...locate(body, bodyError), message: bodyError.message };
+
+      return {
+        problem: {
+          line: block.line + 1 + leadingBlankLines + error.line,
+          column: block.column + error.column + (error.line === 0 ? firstLineIndent : 0),
+          message: `${error.message} (oxfmt)`,
+        },
+      };
+    }
+  }
+
+  if (formatted === value) {
+    return undefined;
+  }
+
+  if (fix) {
+    return { formatted };
+  }
+
+  // Report the first line which differs to give the user a hint
+  const lines = value.split('\n');
+  const formattedLines = formatted.split('\n');
+  let idx = formattedLines.findIndex((line, idx) => line !== lines[idx]);
+
+  // No difference within the formatted output means the original
+  // has extra trailing lines, so point at the first of those
+  if (idx === -1) {
+    idx = formattedLines.length;
+  }
+
+  return {
+    problem: {
+      line: block.line + 1 + idx,
+      column: block.column,
+      message: 'Code block is not formatted (oxfmt)',
+    },
+  };
 }
 
 async function main(
@@ -207,138 +319,104 @@ async function main(
   globs: string[],
   { config, fix = false, ignoreGlobs = [] }: Options,
 ) {
-  const oxfmt = await loadOxfmt();
-  const formatConfig = await loadConfig(oxfmt, config);
+  const oxfmtBin = resolveBin('oxfmt');
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
   const problems = new Problems();
-  const changes = new Map<CodeBlock, string>();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lint-roller-oxfmt-'));
+  const tempFiles = new Map<string, string>();
 
-  const formatBlock = async (
-    block: CodeBlock,
-  ): Promise<{ problem: Problem } | { formatted: string } | undefined> => {
-    const { value } = block;
-    const fileName = `code-block.${block.ext}`;
-    const format = (text: string) => oxfmt.format(fileName, `${text}\n`, formatConfig);
+  // Name the file after the original Markdown file and the starting line
+  // number of the code block so that any stray output from oxfmt is
+  // understandable - the counter prefix guarantees it is unique
+  const writeTempFile = (dir: string, block: CodeBlock, text: string) => {
+    const name = `${tempFiles.size}-${block.filepath.replace(/[^\w-]/g, '-')}-${block.line}.${block.ext}`;
 
-    // Whitespace just inside the code fences is dropped when formatting,
-    // but is needed to map parse errors back to their original position
-    const leadingWhitespace = /^\s*/.exec(value)![0];
-    const leadingBlankLines = leadingWhitespace.split('\n').length - 1;
-    const firstLineIndent = leadingWhitespace.length - leadingWhitespace.lastIndexOf('\n') - 1;
-    const body = value.trim();
+    tempFiles.set(name, path.join(dir, name));
+    fs.writeFileSync(path.join(dir, name), `${text}\n`);
+
+    return name;
+  };
+
+  // Line endings are matched to the Markdown file when writing
+  // changes so drop any carriage returns the config asked for
+  const readTempFile = (name: string) =>
+    fs.readFileSync(tempFiles.get(name)!, 'utf8').replace(/\r\n?/g, '\n').replace(/\n$/, '');
+
+  try {
+    const blocks = await findCodeBlocks(workspace, [...JS_LANGS, ...TS_LANGS], problems);
+    const ignorePath = path.join(tempDir, 'ignore');
+    const blocksDir = path.join(tempDir, 'blocks');
+    const retriesDir = path.join(tempDir, 'retries');
+
+    fs.writeFileSync(ignorePath, '');
+    fs.mkdirSync(blocksDir);
+    fs.mkdirSync(retriesDir);
 
     // Bare object literals need to be wrapped in parens to be parsed as an
     // expression, and the only sure way to find that wrapping in formatted
     // output to undo it is for it to be the whole output, so format those
-    // separately from the code around them and stitch it all back together
-    const orphans = findOrphanObjects(body);
-    let formatted: string | undefined;
-    let error: { position: { line: number; column: number }; message: string } | undefined;
+    // separately from the code around them to piece back together after
+    const entries = blocks.map((block): Entry => {
+      const body = block.value.trim();
+      const orphans = findOrphanObjects(body);
 
-    if (orphans.length) {
-      const parts: string[] = [];
-
-      for (const segment of splitIntoSegments(body, orphans)) {
-        const { orphan, blankLineBefore } = segment;
-        const text = orphan ? wrapOrphanObjects(segment.text, [orphan]) : segment.text;
-        const result = await format(text);
-
-        // Finding them is only a heuristic which might have made matters
-        // worse by splitting mid-statement, so fall back to formatting as-is
-        // but hang on to this (likely more accurate) error in case that fails
-        if (result.errors.length) {
-          const position = offsetToPosition(text, result.errors[0].labels[0]?.start ?? 0);
-
-          if (orphan && position.line === 0) {
-            position.column = Math.max(0, position.column - ORPHAN_OBJECT_PREFIX.length);
-          }
-
-          position.line += segment.line;
-          error = { position, message: result.errors[0].message };
-          parts.length = 0;
-          break;
-        }
-
-        let code = result.code.replace(/\n$/, '');
-
-        code = orphan
-          ? unwrapFormattedOrphanObject(code, segment.text)
-          : stripLeadingSemicolonGuard(code, text);
-
-        parts.push(blankLineBefore ? `\n${code}` : code);
+      if (!orphans.length) {
+        return { block, body, segments: [], tempFile: writeTempFile(blocksDir, block, body) };
       }
 
-      if (parts.length) {
-        formatted = parts.join('\n');
+      const segments = splitIntoSegments(body, orphans).map((segment) => {
+        const text = segment.orphan
+          ? wrapOrphanObjects(segment.text, [segment.orphan])
+          : segment.text;
+
+        return { segment, text, tempFile: writeTempFile(blocksDir, block, text) };
+      });
+
+      return { block, body, segments };
+    });
+
+    const errors = entries.length
+      ? await runOxfmt(oxfmtBin, blocksDir, { config, ignorePath })
+      : new Map<string, ParseError>();
+
+    // Finding bare object literals is only a heuristic which might have made
+    // matters worse by splitting mid-statement, so give any code block where
+    // a piece could not be parsed another go as a whole
+    const retries = entries.filter(({ segments }) =>
+      segments.some(({ tempFile }) => errors.has(tempFile)),
+    );
+
+    if (retries.length) {
+      for (const entry of retries) {
+        entry.tempFile = writeTempFile(retriesDir, entry.block, entry.body);
       }
-    }
 
-    if (formatted === undefined) {
-      const result = await format(body);
-
-      if (!result.errors.length) {
-        formatted = stripLeadingSemicolonGuard(result.code.replace(/\n$/, ''), body);
-      } else {
-        error ??= {
-          position: offsetToPosition(body, result.errors[0].labels[0]?.start ?? 0),
-          message: result.errors[0].message,
-        };
-
-        return {
-          problem: {
-            line: block.line + 1 + leadingBlankLines + error.position.line,
-            column:
-              block.column +
-              error.position.column +
-              (error.position.line === 0 ? firstLineIndent : 0),
-            message: `${error.message} (oxfmt)`,
-          },
-        };
+      for (const [tempFile, error] of await runOxfmt(oxfmtBin, retriesDir, {
+        config,
+        ignorePath,
+      })) {
+        errors.set(tempFile, error);
       }
     }
 
-    if (formatted === value) {
-      return undefined;
+    const changes = new Map<CodeBlock, string>();
+
+    for (const entry of entries) {
+      const result = checkBlock(entry, readTempFile, errors, fix);
+
+      if (result && 'problem' in result) {
+        problems.add(entry.block.filepath, result.problem);
+      } else if (result) {
+        changes.set(entry.block, result.formatted);
+      }
     }
 
-    if (fix) {
-      return { formatted };
-    }
+    writeCodeBlockChanges(workspace, changes);
 
-    // Report the first line which differs to give the user a hint
-    const lines = value.split('\n');
-    const formattedLines = formatted.split('\n');
-    let idx = formattedLines.findIndex((line, idx) => line !== lines[idx]);
-
-    // No difference within the formatted output means the original
-    // has extra trailing lines, so point at the first of those
-    if (idx === -1) {
-      idx = formattedLines.length;
-    }
-
-    return {
-      problem: {
-        line: block.line + 1 + idx,
-        column: block.column,
-        message: 'Code block is not formatted (oxfmt)',
-      },
-    };
-  };
-
-  const blocks = await findCodeBlocks(workspace, [...JS_LANGS, ...TS_LANGS], problems);
-
-  // Kick off formatting for everything but collect it in order
-  for (const [idx, result] of (await Promise.all(blocks.map(formatBlock))).entries()) {
-    if (result && 'problem' in result) {
-      problems.add(blocks[idx].filepath, result.problem);
-    } else if (result) {
-      changes.set(blocks[idx], result.formatted);
-    }
+    return problems.print(workspaceRoot) > 0;
+  } finally {
+    fs.rmSync(tempDir, { force: true, recursive: true });
   }
-
-  writeCodeBlockChanges(workspace, changes);
-
-  return problems.print(workspaceRoot) > 0;
 }
 
 function parseCommandLine() {

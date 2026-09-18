@@ -1,63 +1,35 @@
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { range as balancedRange } from 'balanced-match';
 
-// Helper for `parseJSONC` which walks the text, copying string literals
-// through verbatim, and lets the callback deal with everything else by
-// returning how many characters it consumed and what to output for them
-function mapOutsideStrings(
-  text: string,
-  fn: (index: number) => [consumed: number, output: string] | undefined,
-): string {
-  let out = '';
-  let i = 0;
+/**
+ * Finds the bin script of one of the oxc tools, which are optional peer
+ * dependencies, so that it can be run with the current Node.js binary
+ */
+export function resolveBin(name: 'oxfmt' | 'oxlint'): string {
+  let pkgPath: string;
 
-  while (i < text.length) {
-    if (text[i] === '"') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== '"') {
-        j += text[j] === '\\' ? 2 : 1;
-      }
-      out += text.slice(i, j + 1);
-      i = j + 1;
-    } else {
-      const [consumed, output] = fn(i) ?? [1, text[i]];
-      out += output;
-      i += consumed;
-    }
+  try {
+    pkgPath = fileURLToPath(import.meta.resolve(`${name}/package.json`));
+  } catch (cause) {
+    throw new Error(
+      `Could not resolve "${name}" - it must be installed alongside @electron/lint-roller to use lint-roller-markdown-${name}`,
+      { cause },
+    );
   }
 
-  return out;
-}
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.[name];
 
-// Minimal JSONC support (comments and trailing commas), which is what the
-// oxc tools accept in their JSON config files
-export function parseJSONC(text: string): unknown {
-  const withoutComments = mapOutsideStrings(text, (i) => {
-    if (text.startsWith('//', i)) {
-      const end = text.indexOf('\n', i);
-      return [(end === -1 ? text.length : end) - i, ''];
-    }
-    if (text.startsWith('/*', i)) {
-      const end = text.indexOf('*/', i + 2);
-      if (end === -1) {
-        throw new SyntaxError('Unterminated block comment');
-      }
-      return [end + 2 - i, ''];
-    }
-    return undefined;
-  });
+  if (!bin) {
+    throw new Error(`Could not determine the "${name}" bin path from its package.json`);
+  }
 
-  const withoutTrailingCommas = mapOutsideStrings(withoutComments, (i) => {
-    if (withoutComments[i] === ',' && /^\s*[}\]]/.test(withoutComments.slice(i + 1))) {
-      return [1, ''];
-    }
-    return undefined;
-  });
-
-  return JSON.parse(withoutTrailingCommas);
+  return path.join(path.dirname(pkgPath), bin);
 }
 
 export type SpawnAsyncResult = {
@@ -148,16 +120,16 @@ export interface LintRollerConfig {
   'markdown-ts-check'?: LintRollerTsCheckConfig;
 }
 
-export function loadConfig(path: string) {
-  if (!fs.existsSync(path)) {
+export function loadConfig(configPath: string) {
+  if (!fs.existsSync(configPath)) {
     return undefined;
   }
 
-  const config = fs.readFileSync(path, 'utf8');
+  const config = fs.readFileSync(configPath, 'utf8');
 
   try {
     return JSON.parse(config) as LintRollerConfig;
   } catch {
-    throw new Error(`Couldn't parse config at ${path}`);
+    throw new Error(`Couldn't parse config at ${configPath}`);
   }
 }

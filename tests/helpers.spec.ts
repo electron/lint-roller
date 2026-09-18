@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findCurlyBracedDirectives, parseJSONC } from '../lib/helpers.js';
+import { findCurlyBracedDirectives } from '../lib/helpers.js';
 
 describe('findCurlyBracedDirectives', () => {
   it('should return an empty array if no matches', () => {
@@ -30,30 +30,5 @@ describe('findCurlyBracedDirectives', () => {
       'anObject: { foo: { bar: string } }',
       'b: number',
     ]);
-  });
-});
-
-describe('parseJSONC', () => {
-  it('should parse plain JSON', () => {
-    expect(parseJSONC('{"a": 1, "b": [true, null, "c"]}')).toEqual({ a: 1, b: [true, null, 'c'] });
-  });
-
-  it('should strip line and block comments', () => {
-    const text = `{
-      // line comment
-      "a": 1, /* block
-      comment */ "b": "// not a comment", "c": "/* also not */"
-    }`;
-    expect(parseJSONC(text)).toEqual({ a: 1, b: '// not a comment', c: '/* also not */' });
-  });
-
-  it('should allow trailing commas', () => {
-    const text = String.raw`{"a": [1, 2, ], "b": "quoted \" bracket, ]", /* comment */ }`;
-    expect(parseJSONC(text)).toEqual({ a: [1, 2], b: 'quoted " bracket, ]' });
-  });
-
-  it('should throw on invalid input', () => {
-    expect(() => parseJSONC('{"a": /* unterminated')).toThrow(SyntaxError);
-    expect(() => parseJSONC('{"a": }')).toThrow(SyntaxError);
   });
 });

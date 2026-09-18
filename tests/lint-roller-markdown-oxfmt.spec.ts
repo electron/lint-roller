@@ -161,7 +161,7 @@ describe('lint-roller-markdown-oxfmt', () => {
         encoding: 'utf-8',
       });
 
-      expect(stderr).toContain('Invalid oxfmt config');
+      expect(stderr).toContain('Failed to parse configuration');
       expect(stderr).toContain('expected a boolean');
       expect(status).toEqual(1);
     });
@@ -176,7 +176,7 @@ describe('lint-roller-markdown-oxfmt', () => {
       'clean.md',
     );
 
-    expect(stderr).toContain('oxfmt config not found');
+    expect(stderr).toContain('does-not-exist.json: File not found');
     expect(status).toEqual(1);
   });
 
