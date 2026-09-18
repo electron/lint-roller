@@ -135,7 +135,7 @@ describe('lint-roller-markdown-oxlint', () => {
       ).toMatchSnapshot();
       expect(stdout).toContain('File has changed: dirty.md');
       expect(stdout).toContain('Expected === and instead saw ==');
-      expect(stdout).toContain('There are 4 errors');
+      expect(stdout).toContain('There are 5 errors');
       expect(status).toEqual(1);
     });
   });

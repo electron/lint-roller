@@ -12,8 +12,9 @@ exports[`lint-roller-markdown-oxlint > can detect errors in code blocks 1`] = `
          35:12:    Expected === and instead saw == [eslint(eqeqeq)]
          40:1:     Code block language identifier should be all lowercase
          41:1:     Unexpected var, use let or const instead. [eslint(no-var)]
+         53:9:     Expected === and instead saw == [eslint(eqeqeq)]
 
-There are 9 errors in '<root>'
+There are 10 errors in '<root>'
 "
 `;
 
@@ -146,6 +147,18 @@ Blocks should have lowercase language identifiers:
 
 \`\`\`JavaScript
 const foo = 3;
+\`\`\`
+
+\`@nolint\` only skips linting, so this block is still checked by the formatter:
+
+\`\`\`js @nolint
+if (foo == 1) console.log("foo is one");
+\`\`\`
+
+and \`@noformat\` only skips formatting, so this block is still linted:
+
+\`\`\`js @noformat
+if (foo == 1) console.log("foo is one");
 \`\`\`
 
 This non-js code block should be ignored by the linter:

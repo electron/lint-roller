@@ -8,8 +8,9 @@ exports[`lint-roller-markdown-oxfmt > can detect unformatted code blocks 1`] = `
          27:1:     Code block is not formatted (oxfmt)
          34:4:     Code block is not formatted (oxfmt)
          41:1:     Code block is not formatted (oxfmt)
+         47:1:     Code block is not formatted (oxfmt)
 
-There are 5 errors in '<root>'
+There are 6 errors in '<root>'
 "
 `;
 
@@ -198,7 +199,8 @@ exports[`lint-roller-markdown-oxfmt > reports code blocks which cannot be parsed
          9:8:      Expected \`,\` or \`}\` but found \`.\` (oxfmt)
          15:8:     Unexpected token (oxfmt)
          22:9:     Unexpected token (oxfmt)
+         28:8:     Unexpected token (oxfmt)
 
-There are 3 errors in '<root>'
+There are 4 errors in '<root>'
 "
 `;

@@ -22,8 +22,14 @@ at the right place when indented:
     foo(: bar)
 ```
 
-but not ones marked `@nolint`:
+even when marked `@nolint`, which only the linter honours:
 
-```ts @nolint
+```js @nolint
+{ bar: }
+```
+
+but not ones marked `@noformat`:
+
+```ts @noformat
 const x: = 1
 ```

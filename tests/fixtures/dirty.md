@@ -41,6 +41,18 @@ Blocks should have lowercase language identifiers:
 var foo = 3;
 ```
 
+`@nolint` only skips linting, so this block is still checked by the formatter:
+
+```js @nolint
+if (foo == 1) console.log("foo is one");
+```
+
+and `@noformat` only skips formatting, so this block is still linted:
+
+```js @noformat
+if (foo == 1) console.log("foo is one");
+```
+
 This non-js code block should be ignored by the linter:
 
 ```sh

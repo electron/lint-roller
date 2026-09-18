@@ -343,7 +343,9 @@ async function main(
     fs.readFileSync(tempFiles.get(name)!, 'utf8').replace(/\r\n?/g, '\n').replace(/\n$/, '');
 
   try {
-    const blocks = await findCodeBlocks(workspace, [...JS_LANGS, ...TS_LANGS], problems);
+    const blocks = await findCodeBlocks(workspace, [...JS_LANGS, ...TS_LANGS], problems, {
+      skipTag: '@noformat',
+    });
     const ignorePath = path.join(tempDir, 'ignore');
     const blocksDir = path.join(tempDir, 'blocks');
     const retriesDir = path.join(tempDir, 'retries');

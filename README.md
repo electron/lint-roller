@@ -42,10 +42,11 @@ alongside this package.
 code blocks in Markdown with `oxfmt`, using the project's own `oxfmt`
 installation and config as found from the working directory (`--config
 <path>` to use a different one). `--fix` writes the formatted code back to the
-Markdown files. Code blocks with `@nolint` in their info string are skipped,
-and since they are formatted from a temporary directory path-based `overrides`
-in the config do not apply to them. `oxfmt` must be installed alongside this
-package.
+Markdown files. Formatting can be disabled for specific code blocks by adding
+`@noformat` to the info string (this is independent of `@nolint`, so use both
+to skip a block entirely). Code blocks are formatted from a temporary
+directory, so path-based `overrides` in the config do not apply to them.
+`oxfmt` must be installed alongside this package.
 
 `lint-roller-markdown-ts-check` is a command to type check JS/TS code blocks
 in Markdown with `tsc`. Type checking can be disabled for specific code blocks

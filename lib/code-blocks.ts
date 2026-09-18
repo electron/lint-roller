@@ -78,14 +78,15 @@ export class Problems {
 /**
  * Finds all fenced code blocks in the workspace whose (case-insensitive)
  * language identifier is one of `langs`, skipping empty blocks and those
- * marked `@nolint` in their info string. With `checkCase` any language
- * identifiers which aren't lowercase are reported to `problems`.
+ * marked with `skipTag` (e.g. `@nolint`) in their info string. With
+ * `checkCase` any language identifiers which aren't lowercase are reported
+ * to `problems`.
  */
 export async function findCodeBlocks(
   workspace: DocsWorkspace,
   langs: string[],
   problems: Problems,
-  { checkCase = false } = {},
+  { skipTag, checkCase = false }: { skipTag: string; checkCase?: boolean },
 ): Promise<CodeBlock[]> {
   const blocks: CodeBlock[] = [];
 
@@ -113,7 +114,7 @@ export async function findCodeBlocks(
         });
       }
 
-      if (code.meta?.split(' ').includes('@nolint')) {
+      if (code.meta?.split(' ').includes(skipTag)) {
         continue;
       }
 

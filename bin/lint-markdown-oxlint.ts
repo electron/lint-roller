@@ -118,7 +118,10 @@ async function main(
       { block: CodeBlock; tempFile: string; orphans: OrphanObject[] }
     >();
 
-    for (const block of await findCodeBlocks(workspace, langs, problems, { checkCase: true })) {
+    for (const block of await findCodeBlocks(workspace, langs, problems, {
+      skipTag: '@nolint',
+      checkCase: true,
+    })) {
       const orphans = findOrphanObjects(block.value);
       const text = wrapOrphanObjects(block.value, orphans);
 

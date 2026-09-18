@@ -80,3 +80,9 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 ```javascript @nolint
 var foo = 3
 ```
+
+Formatting-only problems can be skipped with `@noformat`, which still lints:
+
+```js @noformat
+console.log(   "all good here!"   ) ;
+```
