@@ -165,8 +165,9 @@ exports[`lint-roller-markdown-oxlint > preserves blockquotes and indentation wit
          39:3:     Unexpected var, use let or const instead. [eslint(no-var)]
          60:17:    Expected === and instead saw == [eslint(eqeqeq)]
          67:32:    Expected === and instead saw == [eslint(eqeqeq)]
+         83:24:    Expected === and instead saw == [eslint(eqeqeq)]
 
-There are 6 errors in '<root>'
+There are 7 errors in '<root>'
 "
 `;
 
@@ -238,6 +239,25 @@ Two object literals in one block:
 \`\`\`js
 { label: "first" }
 { label: "second", used: first == second }
+\`\`\`
+
+Literals with a little more going on around them:
+
+\`\`\`js
+{
+  pattern: /[{]$/,
+  brace: "}"
+} // the options
+const re = /abc/
+{
+  detail: "not chained"
+}
+/xyz/.test(detail)
+const explicit = true
+{ terminated: explicit == true };
+const inTemplate = \`\${
+{ toString: () => "not a statement" }
+}\`
 \`\`\`
 "
 `;

@@ -94,8 +94,9 @@ exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading p
          39:3:     Code block is not formatted (oxfmt)
          45:1:     Code block is not formatted (oxfmt)
          66:1:     Code block is not formatted (oxfmt)
+         75:1:     Code block is not formatted (oxfmt)
 
-There are 5 errors in '<root>'
+There are 6 errors in '<root>'
 "
 `;
 
@@ -166,6 +167,23 @@ Two object literals in one block:
 \`\`\`js
 { label: 'first' }
 { label: 'second', used: first == second }
+\`\`\`
+
+Literals with a little more going on around them:
+
+\`\`\`js
+{
+  pattern: /[{]$/,
+  brace: '}'
+} // the options
+const re = /abc/
+{
+  detail: 'not chained'
+}
+/xyz/.test(detail)
+const explicit = true
+{ terminated: explicit == true }
+const inTemplate = \`\${{ toString: () => 'not a statement' }}\`
 \`\`\`
 "
 `;

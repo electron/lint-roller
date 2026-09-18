@@ -207,6 +207,17 @@ describe('lint-roller-markdown-oxfmt', () => {
       ).toMatchSnapshot();
       expect(stdout).toContain('There are 0 errors');
       expect(status).toEqual(0);
+
+      // And it's clean afterwards, with either style
+      for (const config of [CONFIG_NO_SEMI, CONFIG_SEMI]) {
+        expect(
+          runLintMarkdownOxfmt('--root', tmpdir, '--config', config, '--fix', 'edge-cases.md')
+            .status,
+        ).toEqual(0);
+        expect(
+          runLintMarkdownOxfmt('--root', tmpdir, '--config', config, 'edge-cases.md').status,
+        ).toEqual(0);
+      }
     });
   });
 

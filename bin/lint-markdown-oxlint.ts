@@ -17,7 +17,7 @@ import {
   unwrapOrphanObjects,
   wrapOrphanObjects,
 } from '../lib/code-blocks.js';
-import type { CodeBlock, LineRange } from '../lib/code-blocks.js';
+import type { CodeBlock, OrphanObject } from '../lib/code-blocks.js';
 import { spawnAsync } from '../lib/helpers.js';
 import { DocsWorkspace } from '../lib/markdown.js';
 
@@ -134,7 +134,10 @@ async function main(
   try {
     // Keyed by the basename of the temp file the block was written to, with
     // the bare object literals that got wrapped so that can be undone again
-    const blocks = new Map<string, { block: CodeBlock; tempFile: string; orphans: LineRange[] }>();
+    const blocks = new Map<
+      string,
+      { block: CodeBlock; tempFile: string; orphans: OrphanObject[] }
+    >();
 
     for (const block of await findCodeBlocks(workspace, langs, problems, { checkCase: true })) {
       const orphans = findOrphanObjects(block.value);

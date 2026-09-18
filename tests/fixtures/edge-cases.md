@@ -66,3 +66,22 @@ Two object literals in one block:
 { label: "first" }
 { label: "second", used: first == second }
 ```
+
+Literals with a little more going on around them:
+
+```js
+{
+  pattern: /[{]$/,
+  brace: "}"
+} // the options
+const re = /abc/
+{
+  detail: "not chained"
+}
+/xyz/.test(detail)
+const explicit = true
+{ terminated: explicit == true };
+const inTemplate = `${
+{ toString: () => "not a statement" }
+}`
+```

@@ -10,12 +10,16 @@ import type { FormatConfig } from 'oxfmt';
 import {
   findCodeBlocks,
   findOrphanObjects,
+  maskStringsAndComments,
+  matchingBracket,
+  wrapOrphanObjects,
   writeCodeBlockChanges,
   JS_LANGS,
+  ORPHAN_OBJECT_PREFIX,
   Problems,
   TS_LANGS,
 } from '../lib/code-blocks.js';
-import type { CodeBlock, LineRange, Problem } from '../lib/code-blocks.js';
+import type { CodeBlock, OrphanObject, Problem } from '../lib/code-blocks.js';
 import { parseJSONC } from '../lib/helpers.js';
 import { DocsWorkspace } from '../lib/markdown.js';
 
@@ -38,11 +42,51 @@ function stripLeadingSemicolonGuard(formatted: string, original: string): string
     : formatted.replace(LEADING_SEMICOLON_GUARD, '$1');
 }
 
+/**
+ * Strips the wrapping from a formatted bare object literal: the parens are
+ * kept around an object literal but not an array literal, and the semicolon
+ * guards come back as a trailing semicolon and/or with "semi: false" style
+ * a leading one
+ */
+function unwrapFormattedOrphanObject(formatted: string, original: string): string {
+  let code = formatted;
+  let masked = maskStringsAndComments(code);
+  const remove = (idx: number) => {
+    code = code.slice(0, idx) + code.slice(idx + 1);
+    masked = masked.slice(0, idx) + masked.slice(idx + 1);
+  };
+
+  if (masked.startsWith(';')) {
+    remove(0);
+  }
+
+  if (masked.startsWith('(')) {
+    const close = matchingBracket(masked, 0);
+
+    if (close !== -1 && /^[;\s]*$/.test(masked.slice(close + 1))) {
+      remove(close);
+      remove(0);
+    }
+  }
+
+  // Only keep a trailing semicolon if there was one to begin with
+  if (!/;\s*$/.test(maskStringsAndComments(original))) {
+    const last = masked.trimEnd().length - 1;
+
+    if (masked[last] === ';') {
+      remove(last);
+    }
+  }
+
+  return code;
+}
+
 interface Segment {
   text: string;
   /** 0-based line the segment starts on */
   line: number;
-  isOrphanObject: boolean;
+  /** Set for a bare object literal, relative to this segment */
+  orphan?: OrphanObject;
   blankLineBefore: boolean;
 }
 
@@ -50,20 +94,20 @@ interface Segment {
  * Splits code up into the given bare object literals and the runs of code
  * around them so that each can be formatted separately
  */
-function splitIntoSegments(text: string, orphans: LineRange[]): Segment[] {
+function splitIntoSegments(text: string, orphans: OrphanObject[]): Segment[] {
   const lines = text.split('\n');
   const segments: Segment[] = [];
-  const pushSegment = (start: number, end: number, isOrphanObject: boolean) => {
+  const pushSegment = (start: number, end: number, orphan?: OrphanObject) => {
     segments.push({
       text: lines.slice(start, end + 1).join('\n'),
       line: start,
-      isOrphanObject,
+      orphan: orphan && { ...orphan, start: 0, end: orphan.end - orphan.start },
       blankLineBefore: start > 0 && !lines[start - 1].trim(),
     });
   };
   let cursor = 0;
 
-  for (const orphan of [...orphans, { start: lines.length, end: lines.length }]) {
+  for (const orphan of [...orphans, { start: lines.length, end: lines.length, endColumn: 0 }]) {
     let start = cursor;
     let end = orphan.start - 1;
 
@@ -73,11 +117,11 @@ function splitIntoSegments(text: string, orphans: LineRange[]): Segment[] {
     while (end >= start && !lines[end].trim()) end--;
 
     if (start <= end) {
-      pushSegment(start, end, false);
+      pushSegment(start, end);
     }
 
     if (orphan.start < lines.length) {
-      pushSegment(orphan.start, orphan.end, true);
+      pushSegment(orphan.start, orphan.end, orphan);
     }
 
     cursor = orphan.end + 1;
@@ -195,15 +239,19 @@ async function main(
       const parts: string[] = [];
 
       for (const segment of splitIntoSegments(body, orphans)) {
-        const { text, isOrphanObject, blankLineBefore } = segment;
-        const result = await format(isOrphanObject ? `(${text})` : text);
+        const { orphan, blankLineBefore } = segment;
+        const text = orphan ? wrapOrphanObjects(segment.text, [orphan]) : segment.text;
+        const result = await format(text);
 
         // Finding them is only a heuristic which might have made matters
         // worse by splitting mid-statement, so fall back to formatting as-is
         // but hang on to this (likely more accurate) error in case that fails
         if (result.errors.length) {
-          const offset = (result.errors[0].labels[0]?.start ?? 0) - (isOrphanObject ? 1 : 0);
-          const position = offsetToPosition(text, offset);
+          const position = offsetToPosition(text, result.errors[0].labels[0]?.start ?? 0);
+
+          if (orphan && position.line === 0) {
+            position.column = Math.max(0, position.column - ORPHAN_OBJECT_PREFIX.length);
+          }
 
           position.line += segment.line;
           error = { position, message: result.errors[0].message };
@@ -213,17 +261,9 @@ async function main(
 
         let code = result.code.replace(/\n$/, '');
 
-        if (isOrphanObject) {
-          // The formatter adds a trailing semicolon, or with "semi: false"
-          // style a leading one, and keeps the parens for an object literal
-          // but not an array literal, so strip all of that back off again
-          code = code.replace(/^;/, '').replace(/;$/, '');
-          if (code.startsWith('(') && code.endsWith(')')) {
-            code = code.slice(1, -1);
-          }
-        } else {
-          code = stripLeadingSemicolonGuard(code, text);
-        }
+        code = orphan
+          ? unwrapFormattedOrphanObject(code, segment.text)
+          : stripLeadingSemicolonGuard(code, text);
 
         parts.push(blankLineBefore ? `\n${code}` : code);
       }

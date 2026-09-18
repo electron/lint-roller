@@ -170,10 +170,11 @@ async function main(workspaceRoot: string, globs: string[], { config, ignoreGlob
         }
 
         // Indent the lines if necessary so that tsc output is accurate
-        const indentedCode = codeLines
+        const originalCode = codeLines.join('\n');
+        const code = wrapOrphanObjects(originalCode, findOrphanObjects(originalCode))
+          .split('\n')
           .map((line) => (line.length ? line.padStart(line.length + indent) : line))
           .join('\n');
-        const code = wrapOrphanObjects(indentedCode, findOrphanObjects(indentedCode));
 
         // If there are no require() or import lines, insert a default set of
         // imports so that most snippets will have what they need.
