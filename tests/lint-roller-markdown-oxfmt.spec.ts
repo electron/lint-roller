@@ -180,7 +180,7 @@ describe('lint-roller-markdown-oxfmt', () => {
     expect(status).toEqual(1);
   });
 
-  it('handles blockquotes, list items, leading parens and stray object literals', async () => {
+  it('handles blockquotes, list items, leading parens and json5 code blocks', async () => {
     const { status, stdout } = runLintMarkdownOxfmt(
       '--root',
       FIXTURES_DIR,

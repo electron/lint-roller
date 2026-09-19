@@ -9,23 +9,16 @@ const a = {
 console.log(a
 ```
 
-including orphan object literals:
+including `json5` ones:
 
-```js
+```json5
 { foo: }
-```
-
-at the right place when indented:
-
-```js
-
-    foo(: bar)
 ```
 
 even when marked `@nolint`, which only the linter honours:
 
 ```js @nolint
-{ bar: }
+foo(: bar)
 ```
 
 but not ones marked `@noformat`:

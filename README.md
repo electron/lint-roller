@@ -39,14 +39,18 @@ string. Code blocks are linted from a temporary directory, so path-based
 alongside this package.
 
 `lint-roller-markdown-oxfmt` is a command to check the formatting of JS/TS
-code blocks in Markdown with `oxfmt`, using the project's own `oxfmt`
-installation and config as found from the working directory (`--config
-<path>` to use a different one). `--fix` writes the formatted code back to the
-Markdown files. Formatting can be disabled for specific code blocks by adding
-`@noformat` to the info string (this is independent of `@nolint`, so use both
-to skip a block entirely). Code blocks are formatted from a temporary
+(and `json5`) code blocks in Markdown with `oxfmt`, using the project's own
+`oxfmt` installation and config as found from the working directory
+(`--config <path>` to use a different one). `--fix` writes the formatted code
+back to the Markdown files. Formatting can be disabled for specific code
+blocks by adding `@noformat` to the info string (this is independent of
+`@nolint`, so use both to skip a block entirely). Code blocks are formatted from a temporary
 directory, so path-based `overrides` in the config do not apply to them.
 `oxfmt` must be installed alongside this package.
+
+A code block which is just a bare object literal is not valid JavaScript, so
+give those `json5` as their language instead of `js` - they are then left
+alone by the linter and type checker, but still formatted.
 
 `lint-roller-markdown-ts-check` is a command to type check JS/TS code blocks
 in Markdown with `tsc`. Type checking can be disabled for specific code blocks

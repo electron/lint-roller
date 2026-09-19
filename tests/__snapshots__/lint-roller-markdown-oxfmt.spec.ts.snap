@@ -3,12 +3,12 @@
 exports[`lint-roller-markdown-oxfmt > can detect unformatted code blocks 1`] = `
 "
    dirty.md
-         6:1:      Code block is not formatted (oxfmt)
-         20:1:     Code block is not formatted (oxfmt)
-         27:1:     Code block is not formatted (oxfmt)
-         34:4:     Code block is not formatted (oxfmt)
-         41:1:     Code block is not formatted (oxfmt)
-         47:1:     Code block is not formatted (oxfmt)
+         5:1:      Code block is not formatted (oxfmt)
+         19:1:     Code block is not formatted (oxfmt)
+         26:1:     Code block is not formatted (oxfmt)
+         33:4:     Code block is not formatted (oxfmt)
+         40:1:     Code block is not formatted (oxfmt)
+         46:1:     Code block is not formatted (oxfmt)
 
 There are 6 errors in '<root>'
 "
@@ -58,15 +58,15 @@ This non-js code block should be ignored by the cleaner and the linter:
 echo i am a shell command
 \`\`\`
 
-It should allow orphan objects:
+Bare object literals belong in \`json5\` code blocks, which only get formatted:
 
-\`\`\`js
+\`\`\`json5
 { some: 'object' }
 \`\`\`
 
 and this wrapping kind too:
 
-\`\`\`js
+\`\`\`json5
 {
   some: 'object',
   with: 'different whitespace and tabbing'
@@ -75,33 +75,31 @@ and this wrapping kind too:
 
 and arrays:
 
-\`\`\`js
+\`\`\`json5
 [1, 2, 3]
 \`\`\`
 
 and wrapped arrays:
 
-\`\`\`js
+\`\`\`json5
 [4, 5, 6]
 \`\`\`
 "
 `;
 
-exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading parens and stray object literals 1`] = `
+exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading parens and json5 code blocks 1`] = `
 "
    edge-cases.md
-         23:4:     Code block is not formatted (oxfmt)
+         22:4:     Code block is not formatted (oxfmt)
+         28:3:     Code block is not formatted (oxfmt)
          34:1:     Code block is not formatted (oxfmt)
-         39:3:     Code block is not formatted (oxfmt)
-         45:1:     Code block is not formatted (oxfmt)
-         66:1:     Code block is not formatted (oxfmt)
-         75:1:     Code block is not formatted (oxfmt)
+         44:3:     Code block is not formatted (oxfmt)
 
-There are 6 errors in '<root>'
+There are 4 errors in '<root>'
 "
 `;
 
-exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading parens and stray object literals 2`] = `
+exports[`lint-roller-markdown-oxfmt > handles blockquotes, list items, leading parens and json5 code blocks 2`] = `
 "# Edge Cases
 
 An IIFE, which the formatter wants to guard with a leading semicolon:
@@ -126,69 +124,38 @@ An IIFE, which the formatter wants to guard with a leading semicolon:
    \`\`\`js
    var listed = 'yes'
 
-   console.log(listed)
+   console.log(listed == 'yes')
    \`\`\`
-
-An object literal after a statement:
-
-\`\`\`js
-var options = {}
-console.log(options)
-{
-  foo: 'bar'
-}
-\`\`\`
 
 - \`\`\`js
   var sameLine = 'as the list marker'
   \`\`\`
 
-An object literal with a stray blank line:
+A \`json5\` code block, which only the formatter looks at:
 
-\`\`\`js
-{ padded: 'yes' }
+\`\`\`json5
+{
+  // comments are fine
+  quoted: 'yes',
+  unquoted: 'yes',
+  list: [1, 2, 3]
+}
 \`\`\`
 
-Empty and single-line literals:
+> One inside a blockquote, with a stray blank line:
+>
+> \`\`\`json5
+> { padded: 'yes' }
+> \`\`\`
 
-\`\`\`js
+Empty and single-line ones:
+
+\`\`\`json5
 {}
 \`\`\`
 
-\`\`\`js
+\`\`\`json5
 []
-\`\`\`
-
-\`\`\`js
-{ compare: left == right }
-\`\`\`
-
-Two object literals in one block:
-
-\`\`\`js
-{ label: 'first' }
-{ label: 'second', used: first == second }
-\`\`\`
-
-Literals with a little more going on around them:
-
-\`\`\`js
-{
-  pattern: /[{]$/,
-  brace: '}'
-} // the options
-const re = /abc/
-{
-  detail: 'not chained'
-}
-/xyz/.test(detail)
-const explicit = true
-{ terminated: explicit == true }
-let step = 1
-{ rate: step++ / explicit, next: step == 2 }
-step++
-{ after: 'an increment' }
-const inTemplate = \`\${{ toString: () => 'not a statement' }}\`
 \`\`\`
 "
 `;
@@ -196,11 +163,10 @@ const inTemplate = \`\${{ toString: () => 'not a statement' }}\`
 exports[`lint-roller-markdown-oxfmt > reports code blocks which cannot be parsed 1`] = `
 "
    unparseable.md
-         9:8:      Expected \`,\` or \`}\` but found \`.\` (oxfmt)
-         15:8:     Unexpected token (oxfmt)
-         22:9:     Unexpected token (oxfmt)
-         28:8:     Unexpected token (oxfmt)
+         5:1:      Code block could not be parsed: Expected \`,\` or \`}\` but found \`.\` (oxfmt)
+         14:1:     Code block could not be parsed: Unexpected token (oxfmt)
+         20:1:     Code block could not be parsed: Unexpected token (oxfmt)
 
-There are 4 errors in '<root>'
+There are 3 errors in '<root>'
 "
 `;

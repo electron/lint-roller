@@ -22,70 +22,36 @@ An IIFE, which the formatter wants to guard with a leading semicolon:
    ```js
    var listed = "yes"
 
-   console.log(listed)
+   console.log(listed == 'yes')
    ```
-
-An object literal after a statement:
-
-```js
-var options = {}
-console.log(options)
-{
-  foo: "bar"
-}
-```
 
 - ```js
   var sameLine = "as the list marker"
   ```
 
-An object literal with a stray blank line:
+A `json5` code block, which only the formatter looks at:
 
-```js
-{ padded: "yes" }
-
+```json5
+{
+  // comments are fine
+  "quoted": "yes", unquoted: 'yes',
+  list: [1,2,3]
+}
 ```
 
-Empty and single-line literals:
+> One inside a blockquote, with a stray blank line:
+>
+> ```json5
+> { padded: "yes" }
+>
+> ```
 
-```js
+Empty and single-line ones:
+
+```json5
 {}
 ```
 
-```js
+```json5
 []
-```
-
-```js
-{ compare: left == right }
-```
-
-Two object literals in one block:
-
-```js
-{ label: "first" }
-{ label: "second", used: first == second }
-```
-
-Literals with a little more going on around them:
-
-```js
-{
-  pattern: /[{]$/,
-  brace: "}"
-} // the options
-const re = /abc/
-{
-  detail: "not chained"
-}
-/xyz/.test(detail)
-const explicit = true
-{ terminated: explicit == true };
-let step = 1
-{ rate: step++ / explicit, next: step == 2 }
-step++
-{ after: "an increment" }
-const inTemplate = `${
-{ toString: () => "not a statement" }
-}`
 ```

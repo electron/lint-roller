@@ -9,7 +9,6 @@ import { parseArgs } from 'node:util';
 
 import { URI } from 'vscode-uri';
 
-import { findOrphanObjects, wrapOrphanObjects } from '../lib/code-blocks.js';
 import {
   chunkFilenames,
   findCurlyBracedDirectives,
@@ -170,9 +169,7 @@ async function main(workspaceRoot: string, globs: string[], { config, ignoreGlob
         }
 
         // Indent the lines if necessary so that tsc output is accurate
-        const originalCode = codeLines.join('\n');
-        const code = wrapOrphanObjects(originalCode, findOrphanObjects(originalCode))
-          .split('\n')
+        const code = codeLines
           .map((line) => (line.length ? line.padStart(line.length + indent) : line))
           .join('\n');
 

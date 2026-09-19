@@ -8,16 +8,12 @@ import { parseArgs } from 'node:util';
 
 import {
   findCodeBlocks,
-  findOrphanObjects,
   writeCodeBlockChanges,
   JS_LANGS,
-  ORPHAN_OBJECT_PREFIX,
   Problems,
   TS_LANGS,
-  unwrapOrphanObjects,
-  wrapOrphanObjects,
 } from '../lib/code-blocks.js';
-import type { CodeBlock, OrphanObject } from '../lib/code-blocks.js';
+import type { CodeBlock } from '../lib/code-blocks.js';
 import { resolveBin, spawnAsync } from '../lib/helpers.js';
 import { DocsWorkspace } from '../lib/markdown.js';
 
@@ -111,20 +107,13 @@ async function main(
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lint-roller-oxlint-'));
 
   try {
-    // Keyed by the basename of the temp file the block was written to, with
-    // the bare object literals that got wrapped so that can be undone again
-    const blocks = new Map<
-      string,
-      { block: CodeBlock; tempFile: string; orphans: OrphanObject[] }
-    >();
+    // Keyed by the basename of the temp file the block was written to
+    const blocks = new Map<string, { block: CodeBlock; tempFile: string }>();
 
     for (const block of await findCodeBlocks(workspace, langs, problems, {
       skipTag: '@nolint',
       checkCase: true,
     })) {
-      const orphans = findOrphanObjects(block.value);
-      const text = wrapOrphanObjects(block.value, orphans);
-
       // Name the file after the original Markdown file and the starting
       // line number of the code block so that any stray output from oxlint
       // is understandable - the counter prefix guarantees it is unique
@@ -133,8 +122,8 @@ async function main(
         `${blocks.size}-${block.filepath.replace(/[^\w-]/g, '-')}-${block.line}.${block.ext}`,
       );
 
-      fs.writeFileSync(tempFile, `${text}\n`);
-      blocks.set(path.basename(tempFile), { block, tempFile, orphans });
+      fs.writeFileSync(tempFile, `${block.value}\n`);
+      blocks.set(path.basename(tempFile), { block, tempFile });
     }
 
     if (blocks.size) {
@@ -154,14 +143,10 @@ async function main(
 
         // The code block position is the position of the opening code
         // fence so the first line of code is one after that, which
-        // matches up nicely with the 1-based line from oxlint. Columns
-        // need adjusting back on the lines where a literal got wrapped.
-        const isPrefixed = entry.orphans.some(({ start }) => span.line === start + 1);
-
+        // matches up nicely with the 1-based line from oxlint
         problems.add(entry.block.filepath, {
           line: entry.block.line + span.line,
-          column:
-            entry.block.column - 1 + span.column - (isPrefixed ? ORPHAN_OBJECT_PREFIX.length : 0),
+          column: entry.block.column - 1 + span.column,
           message: `${diagnostic.message}${rule}`,
         });
       }
@@ -170,22 +155,8 @@ async function main(
     if (fix) {
       const changes = new Map<CodeBlock, string>();
 
-      for (const { block, tempFile, orphans } of blocks.values()) {
-        const fixed = unwrapOrphanObjects(
-          fs.readFileSync(tempFile, 'utf8').replace(/\n$/, ''),
-          orphans,
-        );
-
-        // Punt to the user in the unlikely event a fix moved the wrapping
-        if (fixed !== undefined) {
-          changes.set(block, fixed);
-        } else {
-          problems.add(block.filepath, {
-            line: block.line,
-            column: block.column,
-            message: 'Could not apply the fixes for this code block, they need making by hand',
-          });
-        }
+      for (const { block, tempFile } of blocks.values()) {
+        changes.set(block, fs.readFileSync(tempFile, 'utf8').replace(/\n$/, ''));
       }
 
       writeCodeBlockChanges(workspace, changes);

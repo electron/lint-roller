@@ -62,15 +62,15 @@ This non-js code block should be ignored by the cleaner and the linter:
 echo i am a shell command
 \`\`\`
 
-It should allow orphan objects:
+Bare object literals belong in \`json5\` code blocks, which only get formatted:
 
-\`\`\`js
+\`\`\`json5
 {some: 'object'}
 \`\`\`
 
 and this wrapping kind too:
 
-\`\`\`js
+\`\`\`json5
 {
   some: 'object',
   with: 'different whitespace and tabbing'
@@ -79,13 +79,13 @@ and this wrapping kind too:
 
 and arrays:
 
-\`\`\`js
+\`\`\`json5
 [1,2,3]
 \`\`\`
 
 and wrapped arrays:
 
-\`\`\`js
+\`\`\`json5
 [
   4,
   5,
@@ -174,14 +174,10 @@ exports[`lint-roller-markdown-oxlint > preserves blockquotes and indentation wit
    edge-cases.md
          15:3:     Unexpected var, use let or const instead. [eslint(no-var)]
          23:4:     Unexpected var, use let or const instead. [eslint(no-var)]
-         31:1:     Unexpected var, use let or const instead. [eslint(no-var)]
-         39:3:     Unexpected var, use let or const instead. [eslint(no-var)]
-         60:17:    Expected === and instead saw == [eslint(eqeqeq)]
-         67:32:    Expected === and instead saw == [eslint(eqeqeq)]
-         83:24:    Expected === and instead saw == [eslint(eqeqeq)]
-         85:39:    Expected === and instead saw == [eslint(eqeqeq)]
+         25:23:    Expected === and instead saw == [eslint(eqeqeq)]
+         29:3:     Unexpected var, use let or const instead. [eslint(no-var)]
 
-There are 8 errors in '<root>'
+There are 4 errors in '<root>'
 "
 `;
 
@@ -210,72 +206,38 @@ An IIFE, which the formatter wants to guard with a leading semicolon:
    \`\`\`js
    const listed = "yes"
 
-   console.log(listed)
+   console.log(listed == 'yes')
    \`\`\`
-
-An object literal after a statement:
-
-\`\`\`js
-const options = {}
-console.log(options)
-{
-  foo: "bar"
-}
-\`\`\`
 
 - \`\`\`js
   const sameLine = "as the list marker"
   \`\`\`
 
-An object literal with a stray blank line:
+A \`json5\` code block, which only the formatter looks at:
 
-\`\`\`js
-{ padded: "yes" }
-
+\`\`\`json5
+{
+  // comments are fine
+  "quoted": "yes", unquoted: 'yes',
+  list: [1,2,3]
+}
 \`\`\`
 
-Empty and single-line literals:
+> One inside a blockquote, with a stray blank line:
+>
+> \`\`\`json5
+> { padded: "yes" }
+>
+> \`\`\`
 
-\`\`\`js
+Empty and single-line ones:
+
+\`\`\`json5
 {}
 \`\`\`
 
-\`\`\`js
+\`\`\`json5
 []
-\`\`\`
-
-\`\`\`js
-{ compare: left == right }
-\`\`\`
-
-Two object literals in one block:
-
-\`\`\`js
-{ label: "first" }
-{ label: "second", used: first == second }
-\`\`\`
-
-Literals with a little more going on around them:
-
-\`\`\`js
-{
-  pattern: /[{]$/,
-  brace: "}"
-} // the options
-const re = /abc/
-{
-  detail: "not chained"
-}
-/xyz/.test(detail)
-const explicit = true
-{ terminated: explicit == true };
-let step = 1
-{ rate: step++ / explicit, next: step == 2 }
-step++
-{ after: "an increment" }
-const inTemplate = \`\${
-{ toString: () => "not a statement" }
-}\`
 \`\`\`
 "
 `;
