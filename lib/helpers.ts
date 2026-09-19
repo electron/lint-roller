@@ -1,21 +1,35 @@
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { range as balancedRange } from 'balanced-match';
 
-// Helper function to work around import issues with ESM module
-// oxlint-disable-next-line no-new-func, typescript-eslint(no-implied-eval)
-export const dynamicImport = new Function('specifier', 'return import(specifier)');
+/**
+ * Finds the bin script of one of the oxc tools, which are optional peer
+ * dependencies, so that it can be run with the current Node.js binary
+ */
+export function resolveBin(name: 'oxfmt' | 'oxlint'): string {
+  let pkgPath: string;
 
-// From zeke/standard-markdown
-export function removeParensWrappingOrphanedObject(block: string) {
-  return block.replace(/^\(([{|[][\s\S]+[}|\]])\)$/gm, '$1');
-}
+  try {
+    pkgPath = fileURLToPath(import.meta.resolve(`${name}/package.json`));
+  } catch (cause) {
+    throw new Error(
+      `Could not resolve "${name}" - it must be installed alongside @electron/lint-roller to use lint-roller-markdown-${name}`,
+      { cause },
+    );
+  }
 
-// From zeke/standard-markdown
-export function wrapOrphanObjectInParens(block: string) {
-  return block.replace(/^([{|[][\s\S]+[}|\]])$/gm, '($1)');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.[name];
+
+  if (!bin) {
+    throw new Error(`Could not determine the "${name}" bin path from its package.json`);
+  }
+
+  return path.join(path.dirname(pkgPath), bin);
 }
 
 export type SpawnAsyncResult = {
@@ -42,7 +56,8 @@ export async function spawnAsync(
         stdio.stderr += data;
       });
 
-      spawned.on('exit', (code) => resolve({ ...stdio, status: code }));
+      // Wait for 'close' rather than 'exit' so that stdio is fully drained
+      spawned.on('close', (code) => resolve({ ...stdio, status: code }));
       spawned.on('error', (err) => reject(err));
     } catch (err) {
       reject(err);
@@ -105,16 +120,16 @@ export interface LintRollerConfig {
   'markdown-ts-check'?: LintRollerTsCheckConfig;
 }
 
-export function loadConfig(path: string) {
-  if (!fs.existsSync(path)) {
+export function loadConfig(configPath: string) {
+  if (!fs.existsSync(configPath)) {
     return undefined;
   }
 
-  const config = fs.readFileSync(path, 'utf8');
+  const config = fs.readFileSync(configPath, 'utf8');
 
   try {
     return JSON.parse(config) as LintRollerConfig;
   } catch {
-    throw new Error(`Couldn't parse config at ${path}`);
+    throw new Error(`Couldn't parse config at ${configPath}`);
   }
 }

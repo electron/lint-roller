@@ -13,7 +13,7 @@
       "node"
     ],
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "declaration": true
   },
   "include": [

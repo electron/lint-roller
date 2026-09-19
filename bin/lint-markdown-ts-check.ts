@@ -14,7 +14,6 @@ import {
   findCurlyBracedDirectives,
   loadConfig,
   spawnAsync,
-  wrapOrphanObjectInParens,
   LintRollerConfig,
 } from '../lib/helpers.js';
 import { getCodeBlocks, DocsWorkspace } from '../lib/markdown.js';
@@ -85,11 +84,7 @@ function parseDirectives(directive: string, value: string) {
     .filter((parsed): parsed is RegExpMatchArray => parsed !== null);
 }
 
-async function main(
-  workspaceRoot: string,
-  globs: string[],
-  { config = undefined, ignoreGlobs = [] }: Options,
-) {
+async function main(workspaceRoot: string, globs: string[], { config, ignoreGlobs = [] }: Options) {
   const workspace = new DocsWorkspace(workspaceRoot, globs, ignoreGlobs);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lint-roller-ts-check-'));
 
@@ -184,11 +179,9 @@ async function main(
         }
 
         // Indent the lines if necessary so that tsc output is accurate
-        const code = wrapOrphanObjectInParens(
-          codeLines
-            .map((line) => (line.length ? line.padStart(line.length + indent) : line))
-            .join('\n'),
-        );
+        const code = codeLines
+          .map((line) => (line.length ? line.padStart(line.length + indent) : line))
+          .join('\n');
 
         // If there are no require() or import lines, insert a default set of
         // imports so that most snippets will have what they need.

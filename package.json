@@ -4,12 +4,13 @@
   "description": "Markdown linting helpers for Electron org repos",
   "type": "module",
   "engines": {
-    "node": ">=20.16.0 || >=22.4.0"
+    "node": "^22.17.0 || >=24.0.0"
   },
   "bin": {
     "lint-roller-markdown-api-history": "./dist/bin/lint-markdown-api-history.js",
     "lint-roller-markdown-links": "./dist/bin/lint-markdown-links.js",
-    "lint-roller-markdown-standard": "./dist/bin/lint-markdown-standard.js",
+    "lint-roller-markdown-oxfmt": "./dist/bin/lint-markdown-oxfmt.js",
+    "lint-roller-markdown-oxlint": "./dist/bin/lint-markdown-oxlint.js",
     "lint-roller-markdown-ts-check": "./dist/bin/lint-markdown-ts-check.js"
   },
   "files": [
@@ -48,12 +49,12 @@
   },
   "devDependencies": {
     "@types/balanced-match": "^3.0.2",
-    "@types/glob": "^8.1.0",
     "@types/markdown-it": "^14.1.2",
-    "@types/node": "22.8.7",
+    "@types/node": "22.20.2",
     "markdownlint-cli2": "^0.18.0",
-    "oxlint": "^1.57.0",
-    "oxlint-tsgolint": "^0.17.4",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
+    "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.2.5",
     "typescript": "^5.4.5",
     "vitest": "^4.1.1"
@@ -62,11 +63,9 @@
     "@dsanders11/vscode-markdown-languageservice": "^0.3.0",
     "ajv": "^8.16.0",
     "balanced-match": "^3.0.1",
-    "glob": "^10.4.5",
     "hast-util-from-html": "^2.0.1",
     "markdown-it": "^14.1.0",
     "mdast-util-from-markdown": "^2.0.2",
-    "standard": "^17.0.0",
     "unist-util-visit": "^5.0.0",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8",
@@ -74,9 +73,17 @@
     "yaml": "^2.4.5"
   },
   "peerDependencies": {
+    "oxfmt": ">= 0.20.0",
+    "oxlint": ">= 1.65.0",
     "typescript": ">= 4.7.0"
   },
   "peerDependenciesMeta": {
+    "oxfmt": {
+      "optional": true
+    },
+    "oxlint": {
+      "optional": true
+    },
     "typescript": {
       "optional": true
     }

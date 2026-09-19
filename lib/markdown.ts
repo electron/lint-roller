@@ -1,7 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import * as glob from 'glob';
 import MarkdownIt from 'markdown-it';
 import {
   githubSlugifier,
@@ -108,7 +107,8 @@ export class DocsWorkspace implements IWorkspace {
     this.documentCache = new Map();
     this.root = root;
     this.globs = globs;
-    this.ignoreGlobs = ignoreGlobs;
+    // An empty exclude pattern would exclude everything
+    this.ignoreGlobs = ignoreGlobs.filter((pattern) => pattern !== '');
     this.resourceRoot = resourceRoot;
   }
 
@@ -117,9 +117,9 @@ export class DocsWorkspace implements IWorkspace {
   }
 
   async getAllMarkdownDocuments(): Promise<Iterable<TextDocument>> {
-    const files = this.globs.flatMap((pattern) =>
-      glob.sync(pattern, { ignore: this.ignoreGlobs, absolute: true, cwd: this.root }),
-    );
+    const files = fs
+      .globSync(this.globs, { cwd: this.root, exclude: this.ignoreGlobs })
+      .map((file) => path.resolve(this.root, file));
 
     for (const file of files) {
       const document = TextDocument.create(

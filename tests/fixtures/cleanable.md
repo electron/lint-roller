@@ -41,15 +41,15 @@ This non-js code block should be ignored by the cleaner and the linter:
 echo i am a shell command
 ```
 
-It should allow orphan objects:
+Bare object literals belong in `json5` code blocks, which only get formatted:
 
-```js
+```json5
 {some: 'object'}
 ```
 
 and this wrapping kind too:
 
-```js
+```json5
 {
   some: 'object',
   with: 'different whitespace and tabbing'
@@ -58,13 +58,13 @@ and this wrapping kind too:
 
 and arrays:
 
-```js
+```json5
 [1,2,3]
 ```
 
 and wrapped arrays:
 
-```js
+```json5
 [
   4,
   5,

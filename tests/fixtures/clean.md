@@ -26,15 +26,15 @@ It should allow creation of unused variables
 const { BrowserWindow } = require('electron')
 ```
 
-It should allow orphan objects:
+Bare object literals belong in `json5` code blocks, which only get formatted:
 
-```js
+```json5
 { some: 'object' }
 ```
 
 and this wrapping kind too:
 
-```js
+```json5
 {
   some: 'object',
   with: 'different whitespace and tabbing'
@@ -43,15 +43,15 @@ and this wrapping kind too:
 
 and arrays:
 
-```js
+```json5
 [1, 2, 3]
 ```
 
 and wrapped arrays:
 
-```js
+```json5
 [
-  4,
+  4, // four
   5,
   6
 ]
@@ -79,4 +79,10 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 
 ```javascript @nolint
 var foo = 3
+```
+
+Formatting-only problems can be skipped with `@noformat`, which still lints:
+
+```js @noformat
+console.log(   "all good here!"   ) ;
 ```
